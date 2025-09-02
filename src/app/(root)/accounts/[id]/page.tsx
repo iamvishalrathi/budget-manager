@@ -90,6 +90,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
     search: '',
     category: '',
     merchant: '',
+    tags: '',
     dateFrom: '',
     dateTo: '',
     amountMin: '',
@@ -129,6 +130,10 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
       params.append('merchant', searchParams.merchant);
     }
     
+    if (searchParams.tags) {
+      params.append('tags', searchParams.tags);
+    }
+    
     if (searchParams.dateFrom) {
       params.append('from', new Date(searchParams.dateFrom).toISOString());
     }
@@ -161,6 +166,10 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
     accountId ? `/api/adjustments?accountId=${accountId}` : null,
     fetcher
   );
+
+  // Fetch available tags for autocomplete
+  const { data: tagsData } = useSWR('/api/tags', fetcher);
+  const availableTags = tagsData?.tags?.map((t: { tag: string; count: number }) => t.tag) || [];
 
   // Fetch all accounts for transfer functionality
   const { data: allAccounts } = useSWR('/api/accounts', fetcher);
@@ -525,7 +534,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
               </Box>
 
               {/* Active Filter Indicator */}
-              {(searchParams.search || searchParams.category || searchParams.merchant || 
+              {(searchParams.search || searchParams.category || searchParams.merchant || searchParams.tags ||
                 searchParams.dateFrom || searchParams.dateTo || searchParams.amountMin || searchParams.amountMax) && (
                 <Box sx={{ mb: 1, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
                   <Typography variant="caption" color="text.secondary">
@@ -534,6 +543,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                   {searchParams.search && <Chip size="small" label={`Search: "${searchParams.search}"`} />}
                   {searchParams.category && <Chip size="small" label={`Category: "${searchParams.category}"`} />}
                   {searchParams.merchant && <Chip size="small" label={`Merchant: "${searchParams.merchant}"`} />}
+                  {searchParams.tags && <Chip size="small" label={`Tags: "${searchParams.tags}"`} />}
                   {searchParams.dateFrom && <Chip size="small" label={`From: ${searchParams.dateFrom}`} />}
                   {searchParams.dateTo && <Chip size="small" label={`To: ${searchParams.dateTo}`} />}
                   {searchParams.amountMin && <Chip size="small" label={`Min: ₹${searchParams.amountMin}`} />}
@@ -545,6 +555,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                       search: '',
                       category: '',
                       merchant: '',
+                      tags: '',
                       dateFrom: '',
                       dateTo: '',
                       amountMin: '',
@@ -574,6 +585,46 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                         sx={{ flex: 1 }}
                         value={searchParams.merchant}
                         onChange={(e) => setSearchParams(prev => ({ ...prev, merchant: e.target.value }))}
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <Autocomplete
+                        multiple
+                        freeSolo
+                        size="small"
+                        options={availableTags}
+                        value={searchParams.tags ? searchParams.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0) : []}
+                        onChange={(_, newValue) => {
+                          const tagsString = Array.isArray(newValue) ? newValue.join(', ') : '';
+                          setSearchParams(prev => ({ ...prev, tags: tagsString }));
+                        }}
+                        onInputChange={(_, inputValue) => {
+                          // Handle manual input (comma-separated)
+                          if (inputValue.includes(',')) {
+                            const newTags = inputValue.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+                            setSearchParams(prev => ({ ...prev, tags: newTags.join(', ') }));
+                          }
+                        }}
+                        renderTags={(value, getTagProps) =>
+                          value.map((option, index) => (
+                            <Chip
+                              variant="outlined"
+                              label={option}
+                              size="small"
+                              {...getTagProps({ index })}
+                              key={index}
+                            />
+                          ))
+                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Tags"
+                            placeholder="Select or type tags..."
+                            helperText="Select existing tags or type new ones"
+                          />
+                        )}
+                        sx={{ flex: 1 }}
                       />
                     </Box>
                     <Box sx={{ display: 'flex', gap: 2 }}>
@@ -628,6 +679,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                           search: '',
                           category: '',
                           merchant: '',
+                          tags: '',
                           dateFrom: '',
                           dateTo: '',
                           amountMin: '',

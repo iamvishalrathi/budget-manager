@@ -62,6 +62,7 @@ export const transactionQuerySchema = z.object({
   category: z.string().optional(),
   merchant: z.string().optional(),
   search: z.string().optional(),
+  tags: z.string().optional(), // Comma-separated tags for filtering
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
   amountMin: z.coerce.number().min(0).optional(),

@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       category: searchParams.get('category') || undefined,
       merchant: searchParams.get('merchant') || undefined,
       search: searchParams.get('search') || undefined,
+      tags: searchParams.get('tags') || undefined,
       from: searchParams.get('from') || undefined,
       to: searchParams.get('to') || undefined,
       amountMin: searchParams.get('amountMin') || undefined,
@@ -39,7 +40,12 @@ export async function GET(request: NextRequest) {
       type?: string;
       category?: { $regex: string; $options: string };
       merchant?: { $regex: string; $options: string };
-      $or?: Array<{ [key: string]: { $regex: string; $options: string } }>;
+      tags?: { $in: string[] };
+      $or?: Array<{ 
+        [key: string]: 
+          | { $regex: string; $options: string } 
+          | { $in: (string | RegExp)[] }
+      }>;
       date?: { $gte?: Date; $lte?: Date };
       amountCents?: { $gte?: number; $lte?: number };
       _id?: { $lt: string };
@@ -63,11 +69,20 @@ export async function GET(request: NextRequest) {
       filter.merchant = { $regex: query.merchant, $options: 'i' };
     }
 
+    if (query.tags) {
+      // Split comma-separated tags and filter transactions that have any of these tags
+      const tagsArray = query.tags.split(',').map(tag => tag.trim()).filter(tag => tag.length > 0);
+      if (tagsArray.length > 0) {
+        filter.tags = { $in: tagsArray };
+      }
+    }
+
     if (query.search) {
       filter.$or = [
         { category: { $regex: query.search, $options: 'i' } },
         { merchant: { $regex: query.search, $options: 'i' } },
         { note: { $regex: query.search, $options: 'i' } },
+        { tags: { $in: [new RegExp(query.search, 'i')] } }, // Include tags in search
       ];
     }
     
