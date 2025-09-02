@@ -13,7 +13,6 @@ import {
   ListItemText,
   Box,
   IconButton,
-  Switch,
 } from '@mui/material';
 import {
   Menu as MenuIcon,

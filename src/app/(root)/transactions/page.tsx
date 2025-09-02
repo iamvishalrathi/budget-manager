@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import {
   Box,
   Typography,
@@ -57,7 +57,7 @@ const accountTypeColors = {
   cash: '#d32f2f',
 };
 
-export default function TransactionsPage() {
+function TransactionsContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const accountId = searchParams.get('accountId');
@@ -273,5 +273,13 @@ export default function TransactionsPage() {
         </CardContent>
       </Card>
     </Box>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense fallback={<Box display="flex" justifyContent="center" p={4}><CircularProgress /></Box>}>
+      <TransactionsContent />
+    </Suspense>
   );
 }
