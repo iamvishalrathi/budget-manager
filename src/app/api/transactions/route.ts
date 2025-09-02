@@ -20,6 +20,7 @@ export async function GET(request: NextRequest) {
       accountId: searchParams.get('accountId') || undefined,
       type: searchParams.get('type') || undefined,
       category: searchParams.get('category') || undefined,
+      search: searchParams.get('search') || undefined,
       from: searchParams.get('from') || undefined,
       to: searchParams.get('to') || undefined,
       limit: searchParams.get('limit') || undefined,
@@ -34,6 +35,7 @@ export async function GET(request: NextRequest) {
       accountId?: string;
       type?: string;
       category?: { $regex: string; $options: string };
+      $or?: Array<{ [key: string]: { $regex: string; $options: string } }>;
       date?: { $gte?: Date; $lte?: Date };
       _id?: { $lt: string };
     }
@@ -50,6 +52,14 @@ export async function GET(request: NextRequest) {
     
     if (query.category) {
       filter.category = { $regex: query.category, $options: 'i' };
+    }
+
+    if (query.search) {
+      filter.$or = [
+        { category: { $regex: query.search, $options: 'i' } },
+        { merchant: { $regex: query.search, $options: 'i' } },
+        { note: { $regex: query.search, $options: 'i' } },
+      ];
     }
     
     if (query.from || query.to) {

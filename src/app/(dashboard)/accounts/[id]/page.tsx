@@ -20,6 +20,9 @@ import {
   Select,
   MenuItem,
   Fab,
+  Tabs,
+  Tab,
+  ButtonBase,
 } from '@mui/material';
 import { 
   ArrowBack, 
@@ -58,6 +61,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
   const [openTransactionDialog, setOpenTransactionDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [accountId, setAccountId] = useState<string>('');
+  const [transactionFilter, setTransactionFilter] = useState<'all' | 'income' | 'expense' | 'adjustment'>('all');
 
   // Get the account ID from params
   React.useEffect(() => {
@@ -69,8 +73,15 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
     fetcher
   );
 
+  // Build transactions API URL with filter
+  const transactionsUrl = React.useMemo(() => {
+    if (!accountId) return null;
+    const baseUrl = `/api/transactions?accountId=${accountId}`;
+    return transactionFilter === 'all' ? baseUrl : `${baseUrl}&type=${transactionFilter}`;
+  }, [accountId, transactionFilter]);
+
   const { data: transactions, error: transactionsError, isLoading: transactionsLoading, mutate: mutateTransactions } = useSWR(
-    accountId ? `/api/transactions?accountId=${accountId}` : null,
+    transactionsUrl,
     fetcher
   );
 
@@ -216,9 +227,25 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
       {/* Transactions Section */}
       <Card>
         <CardContent>
-          <Typography variant="h6" gutterBottom>
-            Recent Transactions
-          </Typography>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+            <Typography variant="h6">
+              Transactions
+            </Typography>
+          </Box>
+
+          {/* Transaction Filter Tabs */}
+          <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+            <Tabs 
+              value={transactionFilter} 
+              onChange={(_, newValue) => setTransactionFilter(newValue)}
+              aria-label="transaction filter tabs"
+            >
+              <Tab label="All" value="all" />
+              <Tab label="Income" value="income" />
+              <Tab label="Expense" value="expense" />
+              <Tab label="Adjustments" value="adjustment" />
+            </Tabs>
+          </Box>
           
           {transactionsLoading ? (
             <Box display="flex" justifyContent="center" p={2}>
@@ -240,8 +267,9 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                 amountCents: number;
                 type: string;
               }) => (
-                <Box 
+                <ButtonBase
                   key={transaction._id}
+                  onClick={() => router.push(`/transactions/${transaction._id}`)}
                   sx={{ 
                     display: 'flex', 
                     justifyContent: 'space-between', 
@@ -250,19 +278,26 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                     border: '1px solid',
                     borderColor: 'divider',
                     borderRadius: 1,
+                    width: '100%',
+                    '&:hover': {
+                      backgroundColor: 'action.hover',
+                      borderColor: 'primary.main',
+                    },
+                    transition: 'all 0.2s ease-in-out',
                   }}
                 >
-                  <Box>
-                    <Typography variant="body1">{transaction.category}</Typography>
+                  <Box sx={{ textAlign: 'left' }}>
+                    <Typography variant="body1">{transaction.merchant || transaction.category}</Typography>
                     <Typography variant="body2" color="text.secondary">
                       {new Date(transaction.date).toLocaleDateString()}
-                      {transaction.merchant && ` • ${transaction.merchant}`}
+                      {transaction.merchant && transaction.category && ` • ${transaction.category}`}
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
                     <Typography 
                       variant="body1" 
                       color={transaction.type === 'income' ? 'success.main' : 'error.main'}
+                      fontWeight="bold"
                     >
                       {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amountCents))}
                     </Typography>
@@ -272,8 +307,18 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                       color={transaction.type === 'income' ? 'success' : 'error'}
                     />
                   </Box>
-                </Box>
+                </ButtonBase>
               ))}
+              {transactions.transactions.length > 10 && (
+                <Box sx={{ textAlign: 'center', mt: 2 }}>
+                  <Button 
+                    variant="outlined" 
+                    onClick={() => router.push(`/transactions?accountId=${accountId}`)}
+                  >
+                    View All Transactions ({transactions.transactions.length})
+                  </Button>
+                </Box>
+              )}
             </Box>
           )}
         </CardContent>

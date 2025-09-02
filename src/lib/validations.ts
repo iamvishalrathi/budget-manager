@@ -47,6 +47,7 @@ export const transactionQuerySchema = z.object({
   accountId: z.string().optional(),
   type: transactionTypeSchema.optional(),
   category: z.string().optional(),
+  search: z.string().optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
