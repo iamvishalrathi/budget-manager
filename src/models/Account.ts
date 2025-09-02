@@ -19,7 +19,6 @@ const AccountSchema = new Schema<IAccount>(
     userId: {
       type: String,
       required: true,
-      index: true,
     },
     name: {
       type: String,

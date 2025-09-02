@@ -22,12 +22,10 @@ const TransactionSchema = new Schema<ITransaction>(
     userId: {
       type: String,
       required: true,
-      index: true,
     },
     accountId: {
       type: String,
       required: true,
-      index: true,
     },
     type: {
       type: String,
