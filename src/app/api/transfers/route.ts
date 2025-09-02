@@ -6,6 +6,7 @@ import { Transaction } from '@/models/Transaction';
 import { createTransferSchema } from '@/lib/validations';
 import mongoose from 'mongoose';
 import { randomUUID } from 'crypto';
+import { ZodError } from 'zod';
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,7 +17,9 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
+    console.log('Transfer request body:', body);
     const validatedData = createTransferSchema.parse(body);
+    console.log('Validated transfer data:', validatedData);
 
     if (validatedData.fromAccountId === validatedData.toAccountId) {
       return NextResponse.json(
@@ -44,7 +47,14 @@ export async function POST(request: NextRequest) {
     // Check if source account has sufficient balance
     if (fromAccount.currentBalanceCents < validatedData.amountCents) {
       return NextResponse.json(
-        { error: 'Insufficient balance in source account' },
+        { 
+          error: 'Insufficient balance in source account',
+          details: {
+            available: fromAccount.currentBalanceCents,
+            requested: validatedData.amountCents,
+            currency: fromAccount.currency
+          }
+        },
         { status: 400 }
       );
     }
@@ -121,9 +131,10 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('POST /api/transfers error:', error);
     
-    if (error instanceof Error && error.name === 'ZodError') {
+    if (error instanceof ZodError) {
+      console.error('Validation error details:', error.issues);
       return NextResponse.json(
-        { error: 'Validation error', details: error },
+        { error: 'Validation error', details: error.issues },
         { status: 400 }
       );
     }

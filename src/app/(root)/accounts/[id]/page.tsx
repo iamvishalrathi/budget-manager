@@ -112,7 +112,8 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
     },
   });
 
-  const watchedType = watch('type');
+  // Watch the transaction type to show/hide transfer fields
+  const transactionType = watch('type');
 
   // Update form with accountId when it's available
   React.useEffect(() => {
@@ -164,23 +165,45 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
           return;
         }
 
+        const transferData = {
+          fromAccountId: data.accountId,
+          toAccountId: data.transferToAccountId,
+          amountCents: data.amountCents * 100, // Convert to cents
+          date: transactionDate,
+          note: data.note || undefined,
+          category: data.category || 'Transfer',
+        };
+        
+        console.log('Sending transfer data:', transferData);
+
         const response = await fetch('/api/transfers', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            fromAccountId: data.accountId,
-            toAccountId: data.transferToAccountId,
-            amountCents: data.amountCents * 100, // Convert to cents
-            date: transactionDate,
-            note: data.note || undefined,
-            category: data.category || 'Transfer',
-          }),
+          body: JSON.stringify(transferData),
         });
 
         if (!response.ok) {
-          throw new Error('Failed to create transfer');
+          let errorMessage = 'Failed to create transfer';
+          try {
+            const errorData = await response.json();
+            console.error('Transfer creation failed:', errorData);
+            
+            if (errorData.error) {
+              errorMessage = errorData.error;
+              
+              // Add specific balance information if available
+              if (errorData.details && errorData.details.available !== undefined) {
+                const available = formatCurrency(errorData.details.available, errorData.details.currency);
+                const requested = formatCurrency(errorData.details.requested, errorData.details.currency);
+                errorMessage += `\nAvailable: ${available}\nRequested: ${requested}`;
+              }
+            }
+          } catch (parseError) {
+            console.error('Failed to parse error response:', parseError);
+          }
+          throw new Error(errorMessage);
         }
       } else {
         // Handle regular transactions
@@ -451,33 +474,55 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
               />
 
               {/* Transfer Account Selector - Only show for transfer type */}
-              {watchedType === 'transfer' && (
-                <Controller
-                  name="transferToAccountId"
-                  control={control}
-                  render={({ field: { value, onChange, ...field } }) => (
-                    <FormControl fullWidth error={!!errors.transferToAccountId}>
-                      <InputLabel>Transfer To Account</InputLabel>
-                      <Select 
-                        {...field}
-                        value={value || ''}
-                        onChange={onChange}
-                        label="Transfer To Account"
-                      >
-                        {allAccounts?.filter((acc: { _id: string }) => acc._id !== accountId).map((acc: { _id: string; name: string; type: string }) => (
-                          <MenuItem key={acc._id} value={acc._id}>
-                            {acc.name} ({acc.type.replace('_', ' ').toUpperCase()})
-                          </MenuItem>
-                        ))}
-                      </Select>
-                    </FormControl>
+              {transactionType === 'transfer' && (
+                <>
+                  <Controller
+                    name="transferToAccountId"
+                    control={control}
+                    render={({ field: { value, onChange, ...field } }) => (
+                      <FormControl fullWidth error={!!errors.transferToAccountId}>
+                        <InputLabel>Transfer To Account</InputLabel>
+                        <Select 
+                          {...field}
+                          value={value || ''}
+                          onChange={onChange}
+                          label="Transfer To Account"
+                        >
+                          {allAccounts?.filter((acc: { _id: string }) => acc._id !== accountId).map((account: { _id: string; name: string; type: string; currentBalanceCents: number; currency: string }) => (
+                            <MenuItem key={account._id} value={account._id}>
+                              {account.name} ({account.type.toUpperCase()}) - {formatCurrency(account.currentBalanceCents, account.currency)}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                    )}
+                  />
+                  
+                  {/* Show current balance warning */}
+                  {account && (
+                    <Alert severity="info" sx={{ mt: 1 }}>
+                      Available balance: {formatCurrency(account.currentBalanceCents, account.currency)}
+                    </Alert>
                   )}
-                />
+                </>
               )}
               
               <Controller
                 name="amountCents"
                 control={control}
+                rules={{ 
+                  required: 'Amount is required', 
+                  min: { value: 0.01, message: 'Amount must be greater than 0' },
+                  validate: (value) => {
+                    if (transactionType === 'transfer' && account) {
+                      const amountInCents = value * 100;
+                      if (amountInCents > account.currentBalanceCents) {
+                        return `Insufficient balance. Available: ${formatCurrency(account.currentBalanceCents, account.currency)}`;
+                      }
+                    }
+                    return true;
+                  }
+                }}
                 render={({ field: { value, onChange, ...field } }) => (
                   <TextField
                     {...field}
@@ -488,6 +533,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                     helperText={errors.amountCents?.message}
                     value={value || 0}
                     onChange={(e) => onChange(Number(e.target.value))}
+                    inputProps={{ min: 0.01, step: 0.01 }}
                   />
                 )}
               />
