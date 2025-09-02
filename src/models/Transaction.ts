@@ -4,11 +4,13 @@ export interface ITransaction extends Document {
   _id: string;
   userId: string;
   accountId: string;
-  type: 'income' | 'expense' | 'transfer' | 'refund' | 'adjustment';
+  type: 'income' | 'expense' | 'adjustment';
   category: string;
   amountCents: number;
   currency: string;
   date: Date;
+  time?: string;
+  paymentMode?: 'cash' | 'debit_card' | 'credit_card' | 'upi' | 'net_banking' | 'wallet' | 'cheque' | 'other';
   merchant?: string;
   note?: string;
   tags?: string[];
@@ -30,7 +32,7 @@ const TransactionSchema = new Schema<ITransaction>(
     type: {
       type: String,
       required: true,
-      enum: ['income', 'expense', 'transfer', 'refund', 'adjustment'],
+      enum: ['income', 'expense', 'adjustment'],
     },
     category: {
       type: String,
@@ -50,6 +52,15 @@ const TransactionSchema = new Schema<ITransaction>(
       type: Date,
       required: true,
       default: Date.now,
+    },
+    time: {
+      type: String,
+      trim: true,
+    },
+    paymentMode: {
+      type: String,
+      enum: ['cash', 'debit_card', 'credit_card', 'upi', 'net_banking', 'wallet', 'cheque', 'other'],
+      trim: true,
     },
     merchant: {
       type: String,

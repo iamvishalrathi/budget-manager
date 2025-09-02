@@ -39,9 +39,12 @@ interface Transaction {
   _id: string;
   description?: string;
   category?: string;
-  type: 'income' | 'expense' | 'transfer' | 'refund' | 'adjustment';
+  type: 'income' | 'expense' | 'adjustment';
   amountCents: number;
   date: string;
+  time?: string;
+  paymentMode?: string;
+  tags?: string[];
   accountId?: {
     name: string;
   };

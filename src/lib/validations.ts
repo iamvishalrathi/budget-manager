@@ -16,7 +16,9 @@ export const createAccountSchema = z.object({
 export const updateAccountSchema = createAccountSchema.partial();
 
 // Transaction schemas
-export const transactionTypeSchema = z.enum(['income', 'expense', 'transfer', 'refund', 'adjustment']);
+export const transactionTypeSchema = z.enum(['income', 'expense', 'adjustment']);
+
+export const paymentModeSchema = z.enum(['cash', 'debit_card', 'credit_card', 'upi', 'net_banking', 'wallet', 'cheque', 'other']);
 
 export const createTransactionSchema = z.object({
   accountId: z.string().min(1, 'Account ID is required'),
@@ -25,6 +27,8 @@ export const createTransactionSchema = z.object({
   amountCents: z.number().int().positive('Amount must be positive'),
   currency: currencySchema,
   date: z.coerce.date(),
+  time: z.string().optional(),
+  paymentMode: paymentModeSchema.optional(),
   merchant: z.string().max(100).optional(),
   note: z.string().max(500).optional(),
   tags: z.array(z.string().max(30)).optional(),

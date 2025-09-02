@@ -23,6 +23,7 @@ import {
   Tabs,
   Tab,
   ButtonBase,
+  Autocomplete,
 } from '@mui/material';
 import { 
   ArrowBack, 
@@ -98,8 +99,11 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
       amountCents: 0,
       currency: 'INR',
       date: new Date().toISOString().split('T')[0],
+      time: new Date().toTimeString().slice(0, 5),
+      paymentMode: '',
       merchant: '',
       note: '',
+      tags: [],
     },
   });
 
@@ -113,8 +117,11 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
         amountCents: 0,
         currency: 'INR',
         date: new Date().toISOString().split('T')[0],
+        time: new Date().toTimeString().slice(0, 5),
+        paymentMode: '',
         merchant: '',
         note: '',
+        tags: [],
       });
     }
   }, [accountId, reset]);
@@ -126,11 +133,21 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
     amountCents: number;
     currency: string;
     date: string;
+    time?: string;
+    paymentMode?: string;
     merchant: string;
     note: string;
+    tags?: string[];
   }) => {
     setSubmitting(true);
     try {
+      // Combine date and time if time is provided
+      const transactionDate = new Date(data.date);
+      if (data.time) {
+        const [hours, minutes] = data.time.split(':');
+        transactionDate.setHours(parseInt(hours), parseInt(minutes));
+      }
+
       const response = await fetch('/api/transactions', {
         method: 'POST',
         headers: {
@@ -142,9 +159,12 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
           category: data.category,
           amountCents: data.amountCents * 100, // Convert to cents
           currency: data.currency,
-          date: new Date(data.date),
+          date: transactionDate,
+          time: data.time || undefined,
+          paymentMode: data.paymentMode || undefined,
           merchant: data.merchant || undefined,
           note: data.note || undefined,
+          tags: data.tags && data.tags.length > 0 ? data.tags : undefined,
         }),
       });
 
@@ -354,8 +374,6 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                     >
                       <MenuItem value="income">Income</MenuItem>
                       <MenuItem value="expense">Expense</MenuItem>
-                      <MenuItem value="transfer">Transfer</MenuItem>
-                      <MenuItem value="refund">Refund</MenuItem>
                       <MenuItem value="adjustment">Adjustment</MenuItem>
                     </Select>
                   </FormControl>
@@ -395,6 +413,70 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                 )}
               />
               
+              <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2 }}>
+                <Controller
+                  name="date"
+                  control={control}
+                  render={({ field: { value, onChange, ...field } }) => (
+                    <TextField
+                      {...field}
+                      label="Date"
+                      type="date"
+                      fullWidth
+                      error={!!errors.date}
+                      helperText={errors.date?.message}
+                      value={value || ''}
+                      onChange={onChange}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  )}
+                />
+                
+                <Controller
+                  name="time"
+                  control={control}
+                  render={({ field: { value, onChange, ...field } }) => (
+                    <TextField
+                      {...field}
+                      label="Time"
+                      type="time"
+                      fullWidth
+                      error={!!errors.time}
+                      helperText={errors.time?.message}
+                      value={value || ''}
+                      onChange={onChange}
+                      InputLabelProps={{ shrink: true }}
+                    />
+                  )}
+                />
+              </Box>
+              
+              <Controller
+                name="paymentMode"
+                control={control}
+                render={({ field: { value, onChange, ...field } }) => (
+                  <FormControl fullWidth error={!!errors.paymentMode}>
+                    <InputLabel>Payment Mode</InputLabel>
+                    <Select 
+                      {...field}
+                      value={value || ''}
+                      onChange={onChange}
+                      label="Payment Mode"
+                    >
+                      <MenuItem value="">Select Payment Mode</MenuItem>
+                      <MenuItem value="cash">Cash</MenuItem>
+                      <MenuItem value="debit_card">Debit Card</MenuItem>
+                      <MenuItem value="credit_card">Credit Card</MenuItem>
+                      <MenuItem value="upi">UPI</MenuItem>
+                      <MenuItem value="net_banking">Net Banking</MenuItem>
+                      <MenuItem value="wallet">Wallet</MenuItem>
+                      <MenuItem value="cheque">Cheque</MenuItem>
+                      <MenuItem value="other">Other</MenuItem>
+                    </Select>
+                  </FormControl>
+                )}
+              />
+              
               <Controller
                 name="merchant"
                 control={control}
@@ -407,6 +489,30 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                     fullWidth
                     error={!!errors.merchant}
                     helperText={errors.merchant?.message}
+                  />
+                )}
+              />
+              
+              <Controller
+                name="tags"
+                control={control}
+                render={({ field: { value, onChange, ...field } }) => (
+                  <Autocomplete
+                    {...field}
+                    multiple
+                    freeSolo
+                    options={[]}
+                    value={value || []}
+                    onChange={(_, newValue) => onChange(newValue)}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Tags (Optional)"
+                        fullWidth
+                        error={!!errors.tags}
+                        helperText={errors.tags?.message || "Press Enter to add tags"}
+                      />
+                    )}
                   />
                 )}
               />
