@@ -259,7 +259,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
     );
   }
 
-  if (transactionError || !transaction) {
+  if (transactionError || !transaction || !transaction.type || !transaction.accountId) {
     return (
       <Box sx={{ p: 3 }}>
         <Alert severity="error">
@@ -335,7 +335,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 {formatCurrency(Math.abs(transaction.amountCents), transaction.currency)}
               </Typography>
               <Chip 
-                label={transaction.type.toUpperCase()} 
+                label={transaction.type?.toUpperCase() || 'UNKNOWN'} 
                 color={transaction.type === 'income' ? 'success' : 'error'}
                 sx={{ mt: 1 }}
               />
@@ -353,7 +353,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
                 <AccountIcon sx={{ mr: 1, color }} />
                 <Typography variant="body1">
-                  {account?.name} ({account?.type.toUpperCase()})
+                  {account?.name} ({account?.type?.toUpperCase() || 'UNKNOWN'})
                 </Typography>
               </Box>
             </Box>
@@ -474,7 +474,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                     <Select {...field} label="Account">
                       {accounts?.map((acc: Account) => (
                         <MenuItem key={acc._id} value={acc._id}>
-                          {acc.name} ({acc.type.toUpperCase()})
+                          {acc.name} ({acc.type?.toUpperCase() || 'UNKNOWN'})
                         </MenuItem>
                       ))}
                     </Select>

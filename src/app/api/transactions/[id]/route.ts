@@ -13,6 +13,40 @@ interface RouteParams {
   }>;
 }
 
+export async function GET(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params;
+    const { userId } = await auth();
+    
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      return NextResponse.json({ error: 'Invalid transaction ID' }, { status: 400 });
+    }
+
+    await connectDB();
+    
+    const transaction = await Transaction.findOne({
+      _id: id,
+      userId,
+    }).populate('accountId', 'name type');
+    
+    if (!transaction) {
+      return NextResponse.json({ error: 'Transaction not found' }, { status: 404 });
+    }
+
+    return NextResponse.json(transaction);
+  } catch (error) {
+    console.error('GET /api/transactions/[id] error:', error);
+    return NextResponse.json(
+      { error: 'Failed to fetch transaction' },
+      { status: 500 }
+    );
+  }
+}
+
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
