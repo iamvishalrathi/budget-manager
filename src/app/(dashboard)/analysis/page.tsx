@@ -2,7 +2,6 @@
 
 import React, { useState, useMemo } from 'react';
 import {
-    Grid,
     Card,
     CardContent,
     Typography,
@@ -168,8 +167,8 @@ export default function AnalyticsPage() {
             </Typography>
 
             {/* Filters */}
-            <Grid container spacing={2} sx={{ mb: 3 }}>
-                <Grid item xs={12} sm={6} md={3}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2, mb: 3 }}>
+                <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 45%', md: '1 1 22%' }, minWidth: 200 }}>
                     <FormControl fullWidth>
                         <InputLabel>Time Period</InputLabel>
                         <Select
@@ -183,8 +182,8 @@ export default function AnalyticsPage() {
                             <MenuItem value="year">Yearly</MenuItem>
                         </Select>
                     </FormControl>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                </Box>
+                <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 45%', md: '1 1 22%' }, minWidth: 200 }}>
                     <FormControl fullWidth>
                         <InputLabel>Account</InputLabel>
                         <Select
@@ -200,12 +199,12 @@ export default function AnalyticsPage() {
                             ))}
                         </Select>
                     </FormControl>
-                </Grid>
-            </Grid>
+                </Box>
+            </Box>
 
-            <Grid container spacing={3}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
                 {/* Summary Cards */}
-                <Grid item xs={12} sm={6} md={3}>
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' }, gap: 3 }}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" color="success.main">
@@ -216,8 +215,6 @@ export default function AnalyticsPage() {
                             </Typography>
                         </CardContent>
                     </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" color="error.main">
@@ -228,8 +225,6 @@ export default function AnalyticsPage() {
                             </Typography>
                         </CardContent>
                     </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6" color={analytics?.summary?.netIncomeCents >= 0 ? 'success.main' : 'error.main'}>
@@ -240,8 +235,6 @@ export default function AnalyticsPage() {
                             </Typography>
                         </CardContent>
                     </Card>
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
                     <Card>
                         <CardContent>
                             <Typography variant="h6">
@@ -252,10 +245,11 @@ export default function AnalyticsPage() {
                             </Typography>
                         </CardContent>
                     </Card>
-                </Grid>
+                </Box>
 
-                {/* Income vs Expenses Chart */}
-                <Grid item xs={12} lg={8}>
+                {/* Charts Section */}
+                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', lg: '2fr 1fr' }, gap: 3 }}>
+                    {/* Income vs Expenses Chart */}
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
@@ -286,10 +280,8 @@ export default function AnalyticsPage() {
                             )}
                         </CardContent>
                     </Card>
-                </Grid>
 
-                {/* Category Breakdown */}
-                <Grid item xs={12} lg={4}>
+                    {/* Category Breakdown */}
                     <Card>
                         <CardContent>
                             <Typography variant="h6" gutterBottom>
@@ -315,8 +307,8 @@ export default function AnalyticsPage() {
                             )}
                         </CardContent>
                     </Card>
-                </Grid>
-            </Grid>
+                </Box>
+            </Box>
         </Box>
     );
 }

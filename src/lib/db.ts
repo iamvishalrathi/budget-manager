@@ -13,7 +13,6 @@ interface MongooseConnection {
 
 // Cached connection object
 declare global {
-  // eslint-disable-next-line no-var
   var mongooseGlobal: MongooseConnection | undefined;
 }
 
