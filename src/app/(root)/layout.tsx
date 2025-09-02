@@ -78,7 +78,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ThemeModeProvider>
-      <Box sx={{ display: 'flex' }}>
+  <Box sx={{ display: 'flex', backgroundColor: 'background.default', minHeight: '100vh' }}>
         <AppBar
           position="fixed"
           sx={{
@@ -140,6 +140,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             flexGrow: 1,
             p: 3,
             width: { sm: `calc(100% - ${drawerWidth}px)` },
+            backgroundColor: 'background.default',
+            minHeight: '100vh',
           }}
         >
           <Toolbar />
