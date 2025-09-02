@@ -20,6 +20,8 @@ import {
 import {
   Menu as MenuIcon,
   Dashboard,
+  Home,
+  Analytics,
 } from '@mui/icons-material';
 import { UserButton } from '@clerk/nextjs';
 import { useRouter, usePathname } from 'next/navigation';
@@ -42,7 +44,9 @@ const theme = createTheme({
 const drawerWidth = 240;
 
 const menuItems = [
+  { text: 'Home', icon: <Home />, path: '/' },
   { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
+  { text: 'Analytics', icon: <Analytics />, path: '/analytics' },
 ];
 
 export default function DashboardLayout({

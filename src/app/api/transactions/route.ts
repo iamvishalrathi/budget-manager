@@ -17,13 +17,13 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const query = transactionQuerySchema.parse({
-      accountId: searchParams.get('accountId'),
-      type: searchParams.get('type'),
-      category: searchParams.get('category'),
-      from: searchParams.get('from'),
-      to: searchParams.get('to'),
-      limit: searchParams.get('limit'),
-      cursor: searchParams.get('cursor'),
+      accountId: searchParams.get('accountId') || undefined,
+      type: searchParams.get('type') || undefined,
+      category: searchParams.get('category') || undefined,
+      from: searchParams.get('from') || undefined,
+      to: searchParams.get('to') || undefined,
+      limit: searchParams.get('limit') || undefined,
+      cursor: searchParams.get('cursor') || undefined,
     });
 
     await connectDB();

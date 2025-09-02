@@ -28,6 +28,7 @@ import { z } from 'zod';
 import { useAccounts } from '@/hooks/useApi';
 import { formatCurrency } from '@/lib/money';
 import { createAccountSchema } from '@/lib/validations';
+import { useRouter } from 'next/navigation';
 
 type CreateAccountForm = z.infer<typeof createAccountSchema>;
 
@@ -50,6 +51,7 @@ const accountTypeColors = {
 export default function DashboardPage() {
   const [openDialog, setOpenDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const router = useRouter();
   
   const { accounts, isLoading, isError, mutate } = useAccounts();
 
@@ -144,7 +146,21 @@ export default function DashboardPage() {
               const color = account.color || accountTypeColors[account.type];
               
               return (
-                <Card key={account._id} sx={{ minWidth: 280, flex: '1 1 280px', maxWidth: 400 }}>
+                <Card 
+                  key={account._id} 
+                  sx={{ 
+                    minWidth: 280, 
+                    flex: '1 1 280px', 
+                    maxWidth: 400,
+                    cursor: 'pointer',
+                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: 3,
+                    }
+                  }}
+                  onClick={() => router.push(`/accounts/${account._id}`)}
+                >
                   <CardContent>
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                       <IconComponent sx={{ mr: 1, color }} />
