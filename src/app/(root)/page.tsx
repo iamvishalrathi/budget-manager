@@ -1,7 +1,7 @@
 import { Button, Container, Typography, Box } from '@mui/material';
 import Link from 'next/link';
 import { auth } from '@clerk/nextjs/server';
-import FinancialSummary from '@/components/FinancialSummary';
+import FinancialSummary from '@/components/Home/FinancialSummary';
 
 export default async function HomePage() {
   const { userId } = await auth();
@@ -30,33 +30,6 @@ export default async function HomePage() {
             </Typography>
             
             <FinancialSummary />
-            
-            <Box sx={{ mt: 4, display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-              <Button 
-                variant="contained" 
-                size="large" 
-                component={Link} 
-                href="/dashboard"
-              >
-                Manage Accounts
-              </Button>
-              <Button 
-                variant="outlined" 
-                size="large" 
-                component={Link} 
-                href="/transactions"
-              >
-                View Transactions
-              </Button>
-              <Button 
-                variant="outlined" 
-                size="large" 
-                component={Link} 
-                href="/analysis"
-              >
-                Analytics
-              </Button>
-            </Box>
           </Box>
         ) : (
           // Non-logged-in user view
