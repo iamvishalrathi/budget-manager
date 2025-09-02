@@ -226,13 +226,13 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
             </Box>
           ) : transactionsError ? (
             <Alert severity="error">Failed to load transactions</Alert>
-          ) : !transactions || !Array.isArray(transactions) || transactions.length === 0 ? (
+          ) : !transactions || !Array.isArray(transactions.transactions) || transactions.transactions.length === 0 ? (
             <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
               No transactions yet. Add your first transaction using the + button.
             </Typography>
           ) : (
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-              {Array.isArray(transactions) && transactions.slice(0, 10).map((transaction: {
+              {Array.isArray(transactions.transactions) && transactions.transactions.slice(0, 10).map((transaction: {
                 _id: string;
                 category: string;
                 date: string;
