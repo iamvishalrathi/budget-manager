@@ -21,7 +21,14 @@ import {
   Alert,
   Chip,
 } from '@mui/material';
-import { Add, AccountBalance, Wallet, CreditCard, Train, AttachMoney } from '@mui/icons-material';
+import { 
+  Add, 
+  AccountBalance, 
+  Wallet, 
+  CreditCard, 
+  Train, 
+  AttachMoney
+} from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -54,8 +61,6 @@ export default function DashboardPage() {
   const router = useRouter();
   
   const { accounts, isLoading, isError, mutate } = useAccounts();
-
-  const totalBalance = accounts?.reduce((sum, account) => sum + account.currentBalanceCents, 0) || 0;
 
   const {
     control,
@@ -119,81 +124,99 @@ export default function DashboardPage() {
   return (
     <Box sx={{ p: 3 }}>
       <Typography variant="h4" component="h1" gutterBottom>
-        Dashboard
+        Account Management
       </Typography>
       
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {/* Summary Card */}
-        <Card>
-          <CardContent>
-            <Typography variant="h6" gutterBottom>
-              Total Balance
-            </Typography>
-            <Typography variant="h3" color="primary">
-              {formatCurrency(totalBalance)}
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              Across {accounts?.length || 0} accounts
-            </Typography>
-          </CardContent>
-        </Card>
+        {/* Accounts Grid */}
+        {accounts && accounts.length > 0 ? (
+          <Box sx={{ 
+            display: 'grid', 
+            gridTemplateColumns: { 
+              xs: '1fr', 
+              sm: 'repeat(2, 1fr)', 
+              md: 'repeat(3, 1fr)',
+              lg: 'repeat(4, 1fr)'
+            }, 
+            gap: 3 
+          }}>
+            {accounts.map((account) => {
+              const accountIcon = accountTypeIcons[account.type as keyof typeof accountTypeIcons];
+              const IconComponent = accountIcon || AccountBalance;
+              const color = accountTypeColors[account.type as keyof typeof accountTypeColors] || '#666';
 
-        {/* Accounts */}
-        <Box>
-          <Typography variant="h5" gutterBottom>
-            Your Accounts
-          </Typography>
-          
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
-            {accounts?.map((account) => {
-              const IconComponent = accountTypeIcons[account.type];
-              const color = account.color || accountTypeColors[account.type];
-              
               return (
-                <Card 
-                  key={account._id} 
-                  sx={{ 
-                    minWidth: 280, 
-                    flex: '1 1 280px', 
-                    maxWidth: 400,
+                <Card
+                  key={account._id}
+                  sx={{
                     cursor: 'pointer',
-                    transition: 'transform 0.2s, box-shadow 0.2s',
+                    transition: 'all 0.2s ease-in-out',
                     '&:hover': {
                       transform: 'translateY(-4px)',
-                      boxShadow: 3,
-                    }
+                      boxShadow: 4,
+                    },
                   }}
                   onClick={() => router.push(`/accounts/${account._id}`)}
                 >
                   <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                      <IconComponent sx={{ mr: 1, color }} />
-                      <Typography variant="h6">{account.name}</Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                      <Box
+                        sx={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 48,
+                          height: 48,
+                          borderRadius: '50%',
+                          backgroundColor: color,
+                          color: 'white',
+                          mr: 2,
+                        }}
+                      >
+                        <IconComponent />
+                      </Box>
+                      <Box sx={{ flexGrow: 1 }}>
+                        <Typography variant="h6" noWrap>
+                          {account.name}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {account.type.toUpperCase()}
+                        </Typography>
+                      </Box>
                     </Box>
                     
-                    <Typography variant="h4" color="primary" gutterBottom>
-                      {formatCurrency(account.currentBalanceCents)}
+                    <Typography variant="h5" color="primary" sx={{ mb: 1 }}>
+                      {formatCurrency(account.currentBalanceCents, account.currency)}
                     </Typography>
                     
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Chip 
-                        label={account.type.toUpperCase()} 
-                        size="small" 
-                        sx={{ backgroundColor: color, color: 'white' }}
-                      />
-                      <Typography variant="body2" color="text.secondary">
-                        {account.currency}
-                      </Typography>
-                    </Box>
+                    <Chip 
+                      label={account.currency} 
+                      size="small" 
+                      variant="outlined"
+                    />
                   </CardContent>
                 </Card>
               );
             })}
           </Box>
-        </Box>
+        ) : (
+          <Card>
+            <CardContent sx={{ textAlign: 'center', py: 6 }}>
+              <Typography variant="h6" color="text.secondary" gutterBottom>
+                No accounts yet
+              </Typography>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                Create your first account to get started with managing your finances.
+              </Typography>
+              <Button variant="contained" onClick={() => setOpenDialog(true)}>
+                Create Account
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </Box>
 
-      {/* Add Account Button */}
+      {/* Add Account FAB */}
       <Fab
         color="primary"
         aria-label="add account"
