@@ -21,6 +21,7 @@ import {
   MenuItem,
   IconButton,
   Divider,
+  Autocomplete,
 } from '@mui/material';
 import { 
   ArrowBack, 
@@ -31,7 +32,11 @@ import {
   Wallet, 
   CreditCard, 
   Train, 
-  AttachMoney 
+  AttachMoney,
+  Notes,
+  Tag,
+  Payment,
+  SwapHoriz,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
@@ -63,8 +68,12 @@ interface TransactionFormData {
   amountCents: number;
   currency: string;
   date: string;
+  time?: string;
+  paymentMode?: string;
   merchant: string;
   note: string;
+  tags: string[];
+  transferToAccountId?: string;
 }
 
 interface Account {
@@ -91,6 +100,17 @@ const transactionCategories = [
   'Other',
 ];
 
+const paymentModeLabels = {
+  cash: 'Cash',
+  debit_card: 'Debit Card',
+  credit_card: 'Credit Card',
+  upi: 'UPI',
+  net_banking: 'Net Banking',
+  wallet: 'Wallet',
+  cheque: 'Cheque',
+  other: 'Other',
+};
+
 export default function TransactionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const router = useRouter();
   const [openEditDialog, setOpenEditDialog] = useState(false);
@@ -110,10 +130,15 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
   const { data: accounts } = useSWR('/api/accounts', fetcher);
 
+  // Fetch available tags for autocomplete
+  const { data: tagsData } = useSWR('/api/tags', fetcher);
+  const availableTags = tagsData?.tags?.map((t: { tag: string; count: number }) => t.tag) || [];
+
   const {
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -123,23 +148,35 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
       amountCents: 0,
       currency: 'INR',
       date: new Date().toISOString().split('T')[0],
+      time: new Date().toTimeString().slice(0, 5),
+      paymentMode: '',
       merchant: '',
       note: '',
+      tags: [],
+      transferToAccountId: '',
     },
   });
+
+  // Watch the transaction type to show/hide transfer fields
+  const transactionType = watch('type');
 
   // Update form with transaction data when it's available
   React.useEffect(() => {
     if (transaction) {
+      const transactionDate = new Date(transaction.date);
       reset({
         accountId: transaction.accountId._id || transaction.accountId,
         type: transaction.type,
         category: transaction.category,
         amountCents: Math.abs(transaction.amountCents) / 100, // Convert from cents
         currency: transaction.currency,
-        date: new Date(transaction.date).toISOString().split('T')[0],
+        date: transactionDate.toISOString().split('T')[0],
+        time: transaction.time || transactionDate.toTimeString().slice(0, 5),
+        paymentMode: transaction.paymentMode || '',
         merchant: transaction.merchant || '',
         note: transaction.note || '',
+        tags: transaction.tags || [],
+        transferToAccountId: transaction.transferToAccountId || '',
       });
     }
   }, [transaction, reset]);
@@ -149,17 +186,31 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
     
     setSubmitting(true);
     try {
+      // Combine date and time if time is provided
+      const transactionDate = new Date(data.date);
+      if (data.time) {
+        const [hours, minutes] = data.time.split(':');
+        transactionDate.setHours(parseInt(hours), parseInt(minutes));
+      }
+
       const response = await fetch(`/api/transactions/${transactionId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...data,
+          accountId: data.accountId,
+          type: data.type,
+          category: data.category,
           amountCents: data.amountCents * 100, // Convert to cents
-          date: new Date(data.date),
+          currency: data.currency,
+          date: transactionDate,
+          time: data.time || undefined,
+          paymentMode: data.paymentMode || undefined,
           merchant: data.merchant || undefined,
           note: data.note || undefined,
+          tags: data.tags && data.tags.length > 0 ? data.tags : undefined,
+          transferToAccountId: data.type === 'transfer' ? data.transferToAccountId : undefined,
         }),
       });
 
@@ -169,6 +220,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
 
       setOpenEditDialog(false);
       mutateTransaction();
+      alert('Transaction updated successfully!');
     } catch (error) {
       console.error('Error updating transaction:', error);
       alert('Failed to update transaction. Please try again.');
@@ -270,6 +322,7 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                   month: 'long',
                   day: 'numeric',
                 })}
+                {transaction.time && ` at ${transaction.time}`}
               </Typography>
             </Box>
             <Box sx={{ textAlign: 'right' }}>
@@ -331,13 +384,69 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 {transaction.currency}
               </Typography>
             </Box>
+
+            {transaction.paymentMode && (
+              <Box>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Payment Mode
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <Payment sx={{ mr: 1, color: 'text.secondary' }} />
+                  <Typography variant="body1">
+                    {paymentModeLabels[transaction.paymentMode as keyof typeof paymentModeLabels] || transaction.paymentMode}
+                  </Typography>
+                </Box>
+              </Box>
+            )}
+
+            {transaction.type === 'transfer' && (transaction.transferToAccountId || transaction.transferFromAccountId) && (
+              <Box>
+                <Typography variant="body2" color="text.secondary" gutterBottom>
+                  Transfer Details
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                  <SwapHoriz sx={{ mr: 1, color: 'text.secondary' }} />
+                  <Typography variant="body1">
+                    {transaction.amountCents > 0 
+                      ? `From: ${transaction.transferFromAccountId?.name}`
+                      : `To: ${transaction.transferToAccountId?.name}`
+                    }
+                  </Typography>
+                </Box>
+              </Box>
+            )}
           </Box>
+
+          {/* Tags Section */}
+          {transaction.tags && transaction.tags.length > 0 && (
+            <>
+              <Divider sx={{ my: 2 }} />
+              <Box>
+                <Typography variant="body2" color="text.secondary" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Tag sx={{ mr: 1 }} />
+                  Tags
+                </Typography>
+                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 2 }}>
+                  {transaction.tags.map((tag: string, index: number) => (
+                    <Chip
+                      key={index}
+                      label={tag}
+                      size="small"
+                      variant="outlined"
+                      color="primary"
+                    />
+                  ))}
+                </Box>
+              </Box>
+            </>
+          )}
 
           {transaction.note && (
             <>
               <Divider sx={{ my: 2 }} />
               <Box>
-                <Typography variant="body2" color="text.secondary" gutterBottom>
+                <Typography variant="body2" color="text.secondary" gutterBottom sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Notes sx={{ mr: 1 }} />
                   Note
                 </Typography>
                 <Typography variant="body1">
@@ -384,7 +493,6 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                       <MenuItem value="income">Income</MenuItem>
                       <MenuItem value="expense">Expense</MenuItem>
                       <MenuItem value="transfer">Transfer</MenuItem>
-                      <MenuItem value="adjustment">Adjustment</MenuItem>
                     </Select>
                   </FormControl>
                 )}
@@ -443,22 +551,78 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                 )}
               />
 
+              <Box sx={{ display: 'flex', gap: 2 }}>
+                <Controller
+                  name="date"
+                  control={control}
+                  rules={{ required: 'Date is required' }}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Date"
+                      type="date"
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                      error={!!errors.date}
+                      helperText={errors.date?.message}
+                    />
+                  )}
+                />
+
+                <Controller
+                  name="time"
+                  control={control}
+                  render={({ field }) => (
+                    <TextField
+                      {...field}
+                      label="Time"
+                      type="time"
+                      InputLabelProps={{ shrink: true }}
+                      fullWidth
+                    />
+                  )}
+                />
+              </Box>
+
               <Controller
-                name="date"
+                name="paymentMode"
                 control={control}
-                rules={{ required: 'Date is required' }}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    label="Date"
-                    type="date"
-                    InputLabelProps={{ shrink: true }}
-                    fullWidth
-                    error={!!errors.date}
-                    helperText={errors.date?.message}
-                  />
+                  <FormControl fullWidth>
+                    <InputLabel>Payment Mode</InputLabel>
+                    <Select {...field} label="Payment Mode">
+                      <MenuItem value="">Select Payment Mode</MenuItem>
+                      <MenuItem value="cash">Cash</MenuItem>
+                      <MenuItem value="debit_card">Debit Card</MenuItem>
+                      <MenuItem value="credit_card">Credit Card</MenuItem>
+                      <MenuItem value="upi">UPI</MenuItem>
+                      <MenuItem value="net_banking">Net Banking</MenuItem>
+                      <MenuItem value="wallet">Wallet</MenuItem>
+                      <MenuItem value="cheque">Cheque</MenuItem>
+                      <MenuItem value="other">Other</MenuItem>
+                    </Select>
+                  </FormControl>
                 )}
               />
+
+              {transactionType === 'transfer' && (
+                <Controller
+                  name="transferToAccountId"
+                  control={control}
+                  render={({ field }) => (
+                    <FormControl fullWidth>
+                      <InputLabel>Transfer To Account</InputLabel>
+                      <Select {...field} label="Transfer To Account">
+                        {accounts?.filter((acc: Account) => acc._id !== transaction.accountId._id).map((acc: Account) => (
+                          <MenuItem key={acc._id} value={acc._id}>
+                            {acc.name} ({acc.type.toUpperCase()})
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
+                />
+              )}
 
               <Controller
                 name="merchant"
@@ -468,6 +632,39 @@ export default function TransactionDetailPage({ params }: { params: Promise<{ id
                     {...field}
                     label="Merchant (Optional)"
                     fullWidth
+                  />
+                )}
+              />
+
+              <Controller
+                name="tags"
+                control={control}
+                render={({ field }) => (
+                  <Autocomplete
+                    {...field}
+                    multiple
+                    freeSolo
+                    options={availableTags}
+                    value={field.value || []}
+                    onChange={(_, newValue) => field.onChange(newValue)}
+                    renderTags={(tagValue, getTagProps) =>
+                      tagValue.map((option, index) => (
+                        <Chip
+                          variant="outlined"
+                          label={option}
+                          size="small"
+                          {...getTagProps({ index })}
+                          key={index}
+                        />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        label="Tags"
+                        placeholder="Add tags..."
+                      />
+                    )}
                   />
                 )}
               />
