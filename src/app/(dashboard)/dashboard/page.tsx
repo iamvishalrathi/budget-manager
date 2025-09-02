@@ -65,8 +65,12 @@ export default function DashboardPage() {
   } = useForm<CreateAccountForm>({
     resolver: zodResolver(createAccountSchema),
     defaultValues: {
+      name: '',
+      type: 'bank',
       currency: 'INR',
       openingBalanceCents: 0,
+      color: '',
+      icon: '',
     },
   });
 
@@ -208,9 +212,11 @@ export default function DashboardPage() {
               <Controller
                 name="name"
                 control={control}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <TextField
                     {...field}
+                    value={value || ''}
+                    onChange={onChange}
                     label="Account Name"
                     fullWidth
                     error={!!errors.name}
@@ -222,10 +228,15 @@ export default function DashboardPage() {
               <Controller
                 name="type"
                 control={control}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <FormControl fullWidth error={!!errors.type}>
                     <InputLabel>Account Type</InputLabel>
-                    <Select {...field} label="Account Type">
+                    <Select 
+                      {...field}
+                      value={value || 'bank'}
+                      onChange={onChange}
+                      label="Account Type"
+                    >
                       <MenuItem value="bank">Bank</MenuItem>
                       <MenuItem value="wallet">Wallet</MenuItem>
                       <MenuItem value="card">Card</MenuItem>
@@ -239,10 +250,15 @@ export default function DashboardPage() {
               <Controller
                 name="currency"
                 control={control}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <FormControl fullWidth error={!!errors.currency}>
                     <InputLabel>Currency</InputLabel>
-                    <Select {...field} label="Currency">
+                    <Select 
+                      {...field}
+                      value={value || 'INR'}
+                      onChange={onChange}
+                      label="Currency"
+                    >
                       <MenuItem value="INR">INR</MenuItem>
                       <MenuItem value="USD">USD</MenuItem>
                       <MenuItem value="EUR">EUR</MenuItem>
@@ -254,7 +270,7 @@ export default function DashboardPage() {
               <Controller
                 name="openingBalanceCents"
                 control={control}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <TextField
                     {...field}
                     label="Opening Balance"
@@ -262,8 +278,8 @@ export default function DashboardPage() {
                     fullWidth
                     error={!!errors.openingBalanceCents}
                     helperText={errors.openingBalanceCents?.message}
-                    onChange={(e) => field.onChange(Number(e.target.value) * 100)}
-                    value={field.value / 100}
+                    onChange={(e) => onChange(Number(e.target.value) * 100)}
+                    value={(value || 0) / 100}
                   />
                 )}
               />

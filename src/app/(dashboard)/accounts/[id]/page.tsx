@@ -298,10 +298,15 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
               <Controller
                 name="type"
                 control={control}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <FormControl fullWidth error={!!errors.type}>
                     <InputLabel>Transaction Type</InputLabel>
-                    <Select {...field} label="Transaction Type">
+                    <Select 
+                      {...field}
+                      value={value || 'expense'}
+                      onChange={onChange}
+                      label="Transaction Type"
+                    >
                       <MenuItem value="income">Income</MenuItem>
                       <MenuItem value="expense">Expense</MenuItem>
                       <MenuItem value="transfer">Transfer</MenuItem>
@@ -315,9 +320,11 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
               <Controller
                 name="category"
                 control={control}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <TextField
                     {...field}
+                    value={value || ''}
+                    onChange={onChange}
                     label="Category"
                     fullWidth
                     error={!!errors.category}
@@ -329,7 +336,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
               <Controller
                 name="amountCents"
                 control={control}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <TextField
                     {...field}
                     label="Amount"
@@ -337,7 +344,8 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                     fullWidth
                     error={!!errors.amountCents}
                     helperText={errors.amountCents?.message}
-                    onChange={(e) => field.onChange(Number(e.target.value))}
+                    value={value || 0}
+                    onChange={(e) => onChange(Number(e.target.value))}
                   />
                 )}
               />
@@ -345,9 +353,11 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
               <Controller
                 name="merchant"
                 control={control}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <TextField
                     {...field}
+                    value={value || ''}
+                    onChange={onChange}
                     label="Merchant (Optional)"
                     fullWidth
                     error={!!errors.merchant}
@@ -359,9 +369,11 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
               <Controller
                 name="note"
                 control={control}
-                render={({ field }) => (
+                render={({ field: { value, onChange, ...field } }) => (
                   <TextField
                     {...field}
+                    value={value || ''}
+                    onChange={onChange}
                     label="Note (Optional)"
                     multiline
                     rows={3}
