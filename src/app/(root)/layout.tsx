@@ -13,33 +13,20 @@ import {
   ListItemText,
   Box,
   IconButton,
-  ThemeProvider,
-  createTheme,
-  CssBaseline,
+  Switch,
 } from '@mui/material';
 import {
   Menu as MenuIcon,
   Dashboard,
   Home,
   Analytics,
+  Brightness4,
+  Brightness7,
 } from '@mui/icons-material';
 import { UserButton } from '@clerk/nextjs';
 import { useRouter, usePathname } from 'next/navigation';
 
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#1976d2',
-    },
-    secondary: {
-      main: '#dc004e',
-    },
-  },
-  typography: {
-    fontFamily: 'var(--font-inter)',
-  },
-});
+import { ThemeModeProvider, useThemeMode } from '@/context/ThemeContext';
 
 const drawerWidth = 240;
 
@@ -49,11 +36,7 @@ const menuItems = [
   { text: 'Analytics', icon: <Analytics />, path: '/analytics' },
 ];
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const router = useRouter();
   const pathname = usePathname();
@@ -90,9 +73,11 @@ export default function DashboardLayout({
     </div>
   );
 
+  // Theme toggle logic
+  const { mode, toggleTheme } = useThemeMode();
+
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
+    <ThemeModeProvider>
       <Box sx={{ display: 'flex' }}>
         <AppBar
           position="fixed"
@@ -114,6 +99,9 @@ export default function DashboardLayout({
             <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
               Bank Transaction Manager
             </Typography>
+            <IconButton color="inherit" onClick={toggleTheme} sx={{ mr: 2 }}>
+              {mode === 'dark' ? <Brightness7 /> : <Brightness4 />}
+            </IconButton>
             <UserButton />
           </Toolbar>
         </AppBar>
@@ -158,6 +146,6 @@ export default function DashboardLayout({
           {children}
         </Box>
       </Box>
-    </ThemeProvider>
+    </ThemeModeProvider>
   );
 }
