@@ -20,9 +20,12 @@ export async function GET(request: NextRequest) {
       accountId: searchParams.get('accountId') || undefined,
       type: searchParams.get('type') || undefined,
       category: searchParams.get('category') || undefined,
+      merchant: searchParams.get('merchant') || undefined,
       search: searchParams.get('search') || undefined,
       from: searchParams.get('from') || undefined,
       to: searchParams.get('to') || undefined,
+      amountMin: searchParams.get('amountMin') || undefined,
+      amountMax: searchParams.get('amountMax') || undefined,
       limit: searchParams.get('limit') || undefined,
       cursor: searchParams.get('cursor') || undefined,
     });
@@ -35,8 +38,10 @@ export async function GET(request: NextRequest) {
       accountId?: string;
       type?: string;
       category?: { $regex: string; $options: string };
+      merchant?: { $regex: string; $options: string };
       $or?: Array<{ [key: string]: { $regex: string; $options: string } }>;
       date?: { $gte?: Date; $lte?: Date };
+      amountCents?: { $gte?: number; $lte?: number };
       _id?: { $lt: string };
     }
     
@@ -54,6 +59,10 @@ export async function GET(request: NextRequest) {
       filter.category = { $regex: query.category, $options: 'i' };
     }
 
+    if (query.merchant) {
+      filter.merchant = { $regex: query.merchant, $options: 'i' };
+    }
+
     if (query.search) {
       filter.$or = [
         { category: { $regex: query.search, $options: 'i' } },
@@ -69,6 +78,16 @@ export async function GET(request: NextRequest) {
       }
       if (query.to) {
         filter.date.$lte = query.to;
+      }
+    }
+
+    if (query.amountMin !== undefined || query.amountMax !== undefined) {
+      filter.amountCents = {};
+      if (query.amountMin !== undefined) {
+        filter.amountCents.$gte = query.amountMin * 100; // Convert to cents
+      }
+      if (query.amountMax !== undefined) {
+        filter.amountCents.$lte = query.amountMax * 100; // Convert to cents
       }
     }
     

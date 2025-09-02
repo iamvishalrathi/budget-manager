@@ -60,9 +60,12 @@ export const transactionQuerySchema = z.object({
   accountId: z.string().optional(),
   type: transactionTypeSchema.optional(),
   category: z.string().optional(),
+  merchant: z.string().optional(),
   search: z.string().optional(),
   from: z.coerce.date().optional(),
   to: z.coerce.date().optional(),
+  amountMin: z.coerce.number().min(0).optional(),
+  amountMax: z.coerce.number().min(0).optional(),
   limit: z.coerce.number().int().min(1).max(100).default(50),
   cursor: z.string().optional(),
 });

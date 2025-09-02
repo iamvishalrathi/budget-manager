@@ -24,6 +24,9 @@ import {
   Tab,
   ButtonBase,
   Autocomplete,
+  Collapse,
+  IconButton,
+  InputAdornment,
 } from '@mui/material';
 import { 
   ArrowBack, 
@@ -32,7 +35,12 @@ import {
   Wallet, 
   CreditCard, 
   Train, 
-  AttachMoney 
+  AttachMoney,
+  Search,
+  FilterList,
+  ExpandMore,
+  ExpandLess,
+  Clear,
 } from '@mui/icons-material';
 import { useRouter } from 'next/navigation';
 import { useForm, Controller } from 'react-hook-form';
@@ -75,6 +83,18 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
   const [adjustmentSubmitting, setAdjustmentSubmitting] = useState(false);
   const [accountId, setAccountId] = useState<string>('');
   const [transactionFilter, setTransactionFilter] = useState<'all' | 'income' | 'expense' | 'transfer' | 'adjustments'>('all');
+  
+  // Search functionality state
+  const [searchExpanded, setSearchExpanded] = useState(false);
+  const [searchParams, setSearchParams] = useState({
+    search: '',
+    category: '',
+    merchant: '',
+    dateFrom: '',
+    dateTo: '',
+    amountMin: '',
+    amountMax: '',
+  });
 
   // Get the account ID from params
   React.useEffect(() => {
@@ -86,12 +106,50 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
     fetcher
   );
 
-  // Build transactions API URL with filter
+  // Build transactions API URL with filter and search parameters
   const transactionsUrl = React.useMemo(() => {
     if (!accountId) return null;
-    const baseUrl = `/api/transactions?accountId=${accountId}`;
-    return transactionFilter === 'all' ? baseUrl : `${baseUrl}&type=${transactionFilter}`;
-  }, [accountId, transactionFilter]);
+    
+    const params = new URLSearchParams();
+    params.append('accountId', accountId);
+    
+    if (transactionFilter !== 'all') {
+      params.append('type', transactionFilter);
+    }
+    
+    if (searchParams.search) {
+      params.append('search', searchParams.search);
+    }
+    
+    if (searchParams.category) {
+      params.append('category', searchParams.category);
+    }
+    
+    if (searchParams.merchant) {
+      params.append('merchant', searchParams.merchant);
+    }
+    
+    if (searchParams.dateFrom) {
+      params.append('from', new Date(searchParams.dateFrom).toISOString());
+    }
+    
+    if (searchParams.dateTo) {
+      // Set to end of day for the "to" date
+      const toDate = new Date(searchParams.dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      params.append('to', toDate.toISOString());
+    }
+    
+    if (searchParams.amountMin) {
+      params.append('amountMin', searchParams.amountMin);
+    }
+    
+    if (searchParams.amountMax) {
+      params.append('amountMax', searchParams.amountMax);
+    }
+    
+    return `/api/transactions?${params.toString()}`;
+  }, [accountId, transactionFilter, searchParams]);
 
   const { data: transactions, error: transactionsError, isLoading: transactionsLoading, mutate: mutateTransactions } = useSWR(
     transactionsUrl,
@@ -424,6 +482,166 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
               <Tab label="Adjustments" value="adjustments" />
             </Tabs>
           </Box>
+
+          {/* Search Section - Only show for transactions, not adjustments */}
+          {transactionFilter !== 'adjustments' && (
+            <Box sx={{ mb: 2 }}>
+              {/* Quick Search Bar */}
+              <Box sx={{ display: 'flex', gap: 1, mb: 1 }}>
+                <TextField
+                  size="small"
+                  placeholder="Search transactions..."
+                  value={searchParams.search}
+                  onChange={(e) => setSearchParams(prev => ({ ...prev, search: e.target.value }))}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Search />
+                      </InputAdornment>
+                    ),
+                    endAdornment: searchParams.search && (
+                      <InputAdornment position="end">
+                        <IconButton
+                          size="small"
+                          onClick={() => setSearchParams(prev => ({ ...prev, search: '' }))}
+                        >
+                          <Clear />
+                        </IconButton>
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ flexGrow: 1 }}
+                />
+                <Button
+                  variant="outlined"
+                  size="small"
+                  startIcon={<FilterList />}
+                  endIcon={searchExpanded ? <ExpandLess /> : <ExpandMore />}
+                  onClick={() => setSearchExpanded(!searchExpanded)}
+                  sx={{ minWidth: 'auto', px: 2 }}
+                >
+                  Filters
+                </Button>
+              </Box>
+
+              {/* Active Filter Indicator */}
+              {(searchParams.search || searchParams.category || searchParams.merchant || 
+                searchParams.dateFrom || searchParams.dateTo || searchParams.amountMin || searchParams.amountMax) && (
+                <Box sx={{ mb: 1, display: 'flex', gap: 1, alignItems: 'center', flexWrap: 'wrap' }}>
+                  <Typography variant="caption" color="text.secondary">
+                    Active filters:
+                  </Typography>
+                  {searchParams.search && <Chip size="small" label={`Search: "${searchParams.search}"`} />}
+                  {searchParams.category && <Chip size="small" label={`Category: "${searchParams.category}"`} />}
+                  {searchParams.merchant && <Chip size="small" label={`Merchant: "${searchParams.merchant}"`} />}
+                  {searchParams.dateFrom && <Chip size="small" label={`From: ${searchParams.dateFrom}`} />}
+                  {searchParams.dateTo && <Chip size="small" label={`To: ${searchParams.dateTo}`} />}
+                  {searchParams.amountMin && <Chip size="small" label={`Min: ₹${searchParams.amountMin}`} />}
+                  {searchParams.amountMax && <Chip size="small" label={`Max: ₹${searchParams.amountMax}`} />}
+                  <Button
+                    size="small"
+                    variant="text"
+                    onClick={() => setSearchParams({
+                      search: '',
+                      category: '',
+                      merchant: '',
+                      dateFrom: '',
+                      dateTo: '',
+                      amountMin: '',
+                      amountMax: '',
+                    })}
+                  >
+                    Clear all
+                  </Button>
+                </Box>
+              )}
+
+              {/* Advanced Search Panel */}
+              <Collapse in={searchExpanded}>
+                <Card variant="outlined" sx={{ p: 2 }}>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <TextField
+                        size="small"
+                        label="Category"
+                        sx={{ flex: 1 }}
+                        value={searchParams.category}
+                        onChange={(e) => setSearchParams(prev => ({ ...prev, category: e.target.value }))}
+                      />
+                      <TextField
+                        size="small"
+                        label="Merchant"
+                        sx={{ flex: 1 }}
+                        value={searchParams.merchant}
+                        onChange={(e) => setSearchParams(prev => ({ ...prev, merchant: e.target.value }))}
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <TextField
+                        size="small"
+                        label="From Date"
+                        type="date"
+                        sx={{ flex: 1 }}
+                        value={searchParams.dateFrom}
+                        onChange={(e) => setSearchParams(prev => ({ ...prev, dateFrom: e.target.value }))}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                      <TextField
+                        size="small"
+                        label="To Date"
+                        type="date"
+                        sx={{ flex: 1 }}
+                        value={searchParams.dateTo}
+                        onChange={(e) => setSearchParams(prev => ({ ...prev, dateTo: e.target.value }))}
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 2 }}>
+                      <TextField
+                        size="small"
+                        label="Min Amount"
+                        type="number"
+                        sx={{ flex: 1 }}
+                        value={searchParams.amountMin}
+                        onChange={(e) => setSearchParams(prev => ({ ...prev, amountMin: e.target.value }))}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">₹</InputAdornment>
+                        }}
+                      />
+                      <TextField
+                        size="small"
+                        label="Max Amount"
+                        type="number"
+                        sx={{ flex: 1 }}
+                        value={searchParams.amountMax}
+                        onChange={(e) => setSearchParams(prev => ({ ...prev, amountMax: e.target.value }))}
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">₹</InputAdornment>
+                        }}
+                      />
+                    </Box>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        onClick={() => setSearchParams({
+                          search: '',
+                          category: '',
+                          merchant: '',
+                          dateFrom: '',
+                          dateTo: '',
+                          amountMin: '',
+                          amountMax: '',
+                        })}
+                      >
+                        Clear All Filters
+                      </Button>
+                    </Box>
+                  </Box>
+                </Card>
+              </Collapse>
+            </Box>
+          )}
           
           {transactionFilter === 'adjustments' ? (
             adjustmentsLoading ? (
