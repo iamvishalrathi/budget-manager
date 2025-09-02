@@ -167,7 +167,6 @@ export default function DashboardPage() {
       setValue('name', selectedAccount.name);
       setValue('type', selectedAccount.type);
       setValue('currency', selectedAccount.currency);
-      setValue('openingBalanceCents', selectedAccount.openingBalanceCents);
       setValue('color', selectedAccount.color || '');
       setValue('icon', selectedAccount.icon || '');
       setOpenDialog(true);
@@ -521,23 +520,6 @@ export default function DashboardPage() {
                       <MenuItem value="EUR">EUR</MenuItem>
                     </Select>
                   </FormControl>
-                )}
-              />
-              
-              <Controller
-                name="openingBalanceCents"
-                control={control}
-                render={({ field: { value, onChange, ...field } }) => (
-                  <TextField
-                    {...field}
-                    label="Opening Balance"
-                    type="number"
-                    fullWidth
-                    error={!!errors.openingBalanceCents}
-                    helperText={errors.openingBalanceCents?.message}
-                    onChange={(e) => onChange(Number(e.target.value) * 100)}
-                    value={(value || 0) / 100}
-                  />
                 )}
               />
             </Box>
