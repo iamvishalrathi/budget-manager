@@ -54,6 +54,7 @@ const accountTypeIcons = {
   debit_card: CreditCard,
   credit_card: Payment,
   cash: AttachMoney,
+  investments: () => <span style={{ fontSize: '20px' }}>📈</span>,
   others: Category,
   // Backward compatibility for old types
   bank: AccountBalance,
@@ -66,6 +67,7 @@ const accountTypeColors = {
   debit_card: '#f57c00',
   credit_card: '#e91e63',
   cash: '#d32f2f',
+  investments: '#673ab7',
   others: '#607d8b',
   // Backward compatibility for old types
   bank: '#1976d2',
@@ -79,6 +81,7 @@ const getAccountTypeDisplay = (type: string) => {
     debit_card: 'Debit Card',
     credit_card: 'Credit Card',
     cash: 'Cash',
+    investments: 'Investments',
     others: 'Others',
     // Backward compatibility for old types
     bank: 'Bank',
@@ -494,6 +497,7 @@ export default function DashboardPage() {
                       <MenuItem value="debit_card">Debit Card</MenuItem>
                       <MenuItem value="credit_card">Credit Card</MenuItem>
                       <MenuItem value="cash">Cash</MenuItem>
+                      <MenuItem value="investments">Investments</MenuItem>
                       <MenuItem value="others">Others</MenuItem>
                     </Select>
                   </FormControl>
