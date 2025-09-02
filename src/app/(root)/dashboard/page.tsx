@@ -20,14 +20,24 @@ import {
   CircularProgress,
   Alert,
   Chip,
+  IconButton,
+  Menu,
+  ListItemIcon,
+  ListItemText,
 } from '@mui/material';
 import { 
   Add, 
-  AccountBalance, 
   Wallet, 
   CreditCard, 
-  Train, 
-  AttachMoney
+  AttachMoney,
+  TrendingUp,
+  MoreVert,
+  Edit,
+  Delete,
+  Payment,
+  Category,
+  AccountBalance,
+  Train,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -36,28 +46,58 @@ import { useAccounts } from '@/hooks/useApi';
 import { formatCurrency } from '@/lib/money';
 import { createAccountSchema } from '@/lib/validations';
 import { useRouter } from 'next/navigation';
+import { IAccount } from '@/models/Account';
 
 type CreateAccountForm = z.infer<typeof createAccountSchema>;
 
 const accountTypeIcons = {
-  bank: AccountBalance,
   wallet: Wallet,
+  debit_card: CreditCard,
+  credit_card: Payment,
+  cash: AttachMoney,
+  investments: TrendingUp,
+  others: Category,
+  // Backward compatibility for old types
+  bank: AccountBalance,
   card: CreditCard,
   metro: Train,
-  cash: AttachMoney,
 };
 
 const accountTypeColors = {
-  bank: '#1976d2',
   wallet: '#388e3c',
+  debit_card: '#f57c00',
+  credit_card: '#e91e63',
+  cash: '#d32f2f',
+  investments: '#9c27b0',
+  others: '#607d8b',
+  // Backward compatibility for old types
+  bank: '#1976d2',
   card: '#f57c00',
   metro: '#7b1fa2',
-  cash: '#d32f2f',
+};
+
+const getAccountTypeDisplay = (type: string) => {
+  const displayNames: { [key: string]: string } = {
+    wallet: 'Wallet',
+    debit_card: 'Debit Card',
+    credit_card: 'Credit Card',
+    cash: 'Cash',
+    investments: 'Investments',
+    others: 'Others',
+    // Backward compatibility for old types
+    bank: 'Bank',
+    card: 'Card',
+    metro: 'Metro',
+  };
+  return displayNames[type] || type.toUpperCase();
 };
 
 export default function DashboardPage() {
   const [openDialog, setOpenDialog] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<IAccount | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const [selectedAccount, setSelectedAccount] = useState<IAccount | null>(null);
   const router = useRouter();
   
   const { accounts, isLoading, isError, mutate } = useAccounts();
@@ -66,12 +106,13 @@ export default function DashboardPage() {
     control,
     handleSubmit,
     reset,
+    setValue,
     formState: { errors },
   } = useForm<CreateAccountForm>({
     resolver: zodResolver(createAccountSchema),
     defaultValues: {
       name: '',
-      type: 'bank',
+      type: 'wallet',
       currency: 'INR',
       openingBalanceCents: 0,
       color: '',
@@ -79,11 +120,64 @@ export default function DashboardPage() {
     },
   });
 
+  const handleMenuClick = (event: React.MouseEvent<HTMLElement>, account: IAccount) => {
+    setAnchorEl(event.currentTarget);
+    setSelectedAccount(account);
+  };
+
+  const handleMenuClose = () => {
+    setAnchorEl(null);
+    setSelectedAccount(null);
+  };
+
+  const handleEdit = () => {
+    if (selectedAccount) {
+      setEditingAccount(selectedAccount);
+      setValue('name', selectedAccount.name);
+      setValue('type', selectedAccount.type);
+      setValue('currency', selectedAccount.currency);
+      setValue('openingBalanceCents', selectedAccount.openingBalanceCents);
+      setValue('color', selectedAccount.color || '');
+      setValue('icon', selectedAccount.icon || '');
+      setOpenDialog(true);
+    }
+    handleMenuClose();
+  };
+
+  const handleDelete = async () => {
+    if (selectedAccount && confirm(`Are you sure you want to delete "${selectedAccount.name}"?`)) {
+      try {
+        const response = await fetch(`/api/accounts/${selectedAccount._id}`, {
+          method: 'DELETE',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to delete account');
+        }
+
+        mutate(); // Refresh data
+      } catch (error) {
+        console.error('Error deleting account:', error);
+        alert('Failed to delete account. Please try again.');
+      }
+    }
+    handleMenuClose();
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setEditingAccount(null);
+    reset();
+  };
+
   const onSubmit = async (data: CreateAccountForm) => {
     setSubmitting(true);
     try {
-      const response = await fetch('/api/accounts', {
-        method: 'POST',
+      const url = editingAccount ? `/api/accounts/${editingAccount._id}` : '/api/accounts';
+      const method = editingAccount ? 'PUT' : 'POST';
+      
+      const response = await fetch(url, {
+        method,
         headers: {
           'Content-Type': 'application/json',
         },
@@ -91,15 +185,14 @@ export default function DashboardPage() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create account');
+        throw new Error(`Failed to ${editingAccount ? 'update' : 'create'} account`);
       }
 
-      reset();
-      setOpenDialog(false);
+      handleCloseDialog();
       mutate(); // Refresh data
     } catch (error) {
-      console.error('Error creating account:', error);
-      alert('Failed to create account. Please try again.');
+      console.error(`Error ${editingAccount ? 'updating' : 'creating'} account:`, error);
+      alert(`Failed to ${editingAccount ? 'update' : 'create'} account. Please try again.`);
     } finally {
       setSubmitting(false);
     }
@@ -142,7 +235,7 @@ export default function DashboardPage() {
           }}>
             {accounts.map((account) => {
               const accountIcon = accountTypeIcons[account.type as keyof typeof accountTypeIcons];
-              const IconComponent = accountIcon || AccountBalance;
+              const IconComponent = accountIcon || Wallet;
               const color = accountTypeColors[account.type as keyof typeof accountTypeColors] || '#666';
 
               return (
@@ -180,9 +273,18 @@ export default function DashboardPage() {
                           {account.name}
                         </Typography>
                         <Typography variant="body2" color="text.secondary">
-                          {account.type.toUpperCase()}
+                          {getAccountTypeDisplay(account.type)}
                         </Typography>
                       </Box>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleMenuClick(e, account);
+                        }}
+                      >
+                        <MoreVert />
+                      </IconButton>
                     </Box>
                     
                     <Typography variant="h5" color="primary" sx={{ mb: 1 }}>
@@ -226,10 +328,10 @@ export default function DashboardPage() {
         <Add />
       </Fab>
 
-      {/* Add Account Dialog */}
-      <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+      {/* Add/Edit Account Dialog */}
+      <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
         <form onSubmit={handleSubmit(onSubmit)}>
-          <DialogTitle>Add New Account</DialogTitle>
+          <DialogTitle>{editingAccount ? 'Edit Account' : 'Add New Account'}</DialogTitle>
           <DialogContent>
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
               <Controller
@@ -256,15 +358,16 @@ export default function DashboardPage() {
                     <InputLabel>Account Type</InputLabel>
                     <Select 
                       {...field}
-                      value={value || 'bank'}
+                      value={value || 'wallet'}
                       onChange={onChange}
                       label="Account Type"
                     >
-                      <MenuItem value="bank">Bank</MenuItem>
                       <MenuItem value="wallet">Wallet</MenuItem>
-                      <MenuItem value="card">Card</MenuItem>
-                      <MenuItem value="metro">Metro</MenuItem>
+                      <MenuItem value="debit_card">Debit Card</MenuItem>
+                      <MenuItem value="credit_card">Credit Card</MenuItem>
                       <MenuItem value="cash">Cash</MenuItem>
+                      <MenuItem value="investments">Investments</MenuItem>
+                      <MenuItem value="others">Others</MenuItem>
                     </Select>
                   </FormControl>
                 )}
@@ -309,18 +412,38 @@ export default function DashboardPage() {
             </Box>
           </DialogContent>
           <DialogActions>
-            <Button onClick={() => setOpenDialog(false)}>Cancel</Button>
+            <Button onClick={handleCloseDialog}>Cancel</Button>
             <Button 
               type="submit" 
               variant="contained" 
               disabled={submitting}
               startIcon={submitting ? <CircularProgress size={20} /> : null}
             >
-              {submitting ? 'Creating...' : 'Create Account'}
+              {submitting ? (editingAccount ? 'Updating...' : 'Creating...') : (editingAccount ? 'Update Account' : 'Create Account')}
             </Button>
           </DialogActions>
         </form>
       </Dialog>
+
+      {/* Account Actions Menu */}
+      <Menu
+        anchorEl={anchorEl}
+        open={Boolean(anchorEl)}
+        onClose={handleMenuClose}
+      >
+        <MenuItem onClick={handleEdit}>
+          <ListItemIcon>
+            <Edit fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Edit</ListItemText>
+        </MenuItem>
+        <MenuItem onClick={handleDelete}>
+          <ListItemIcon>
+            <Delete fontSize="small" />
+          </ListItemIcon>
+          <ListItemText>Delete</ListItemText>
+        </MenuItem>
+      </Menu>
     </Box>
   );
 }

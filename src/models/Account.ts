@@ -4,7 +4,7 @@ export interface IAccount extends Document {
   _id: string;
   userId: string;
   name: string;
-  type: 'bank' | 'wallet' | 'card' | 'metro' | 'cash';
+  type: 'bank' | 'wallet' | 'card' | 'debit_card' | 'credit_card' | 'metro' | 'cash' | 'investments' | 'others';
   currency: string;
   color?: string;
   icon?: string;
@@ -28,7 +28,7 @@ const AccountSchema = new Schema<IAccount>(
     type: {
       type: String,
       required: true,
-      enum: ['bank', 'wallet', 'card', 'metro', 'cash'],
+      enum: ['bank', 'wallet', 'card', 'debit_card', 'credit_card', 'metro', 'cash', 'investments', 'others'],
     },
     currency: {
       type: String,
