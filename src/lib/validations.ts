@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // Account schemas
-export const accountTypeSchema = z.enum(['bank', 'wallet', 'card', 'debit_card', 'credit_card', 'metro', 'cash', 'investments', 'others']);
+export const accountTypeSchema = z.enum(['bank', 'wallet', 'card', 'debit_card', 'credit_card', 'metro', 'cash', 'others']);
 export const currencySchema = z.string().min(3).max(3);
 
 export const createAccountSchema = z.object({

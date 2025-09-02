@@ -30,7 +30,6 @@ import {
   Wallet, 
   CreditCard, 
   AttachMoney,
-  TrendingUp,
   MoreVert,
   Edit,
   Delete,
@@ -55,7 +54,6 @@ const accountTypeIcons = {
   debit_card: CreditCard,
   credit_card: Payment,
   cash: AttachMoney,
-  investments: TrendingUp,
   others: Category,
   // Backward compatibility for old types
   bank: AccountBalance,
@@ -68,7 +66,6 @@ const accountTypeColors = {
   debit_card: '#f57c00',
   credit_card: '#e91e63',
   cash: '#d32f2f',
-  investments: '#9c27b0',
   others: '#607d8b',
   // Backward compatibility for old types
   bank: '#1976d2',
@@ -82,7 +79,6 @@ const getAccountTypeDisplay = (type: string) => {
     debit_card: 'Debit Card',
     credit_card: 'Credit Card',
     cash: 'Cash',
-    investments: 'Investments',
     others: 'Others',
     // Backward compatibility for old types
     bank: 'Bank',
@@ -90,6 +86,38 @@ const getAccountTypeDisplay = (type: string) => {
     metro: 'Metro',
   };
   return displayNames[type] || type.toUpperCase();
+};
+
+const groupAccountsByType = (accounts: IAccount[]) => {
+  const grouped: { [key: string]: IAccount[] } = {};
+  
+  accounts.forEach(account => {
+    const type = account.type;
+    if (!grouped[type]) {
+      grouped[type] = [];
+    }
+    grouped[type].push(account);
+  });
+  
+  // Define the order of account types
+  const typeOrder = ['wallet', 'debit_card', 'credit_card', 'cash', 'others', 'bank', 'card', 'metro'];
+  
+  // Sort the grouped object by type order
+  const sortedGrouped: { [key: string]: IAccount[] } = {};
+  typeOrder.forEach(type => {
+    if (grouped[type]) {
+      sortedGrouped[type] = grouped[type];
+    }
+  });
+  
+  // Add any remaining types not in the predefined order
+  Object.keys(grouped).forEach(type => {
+    if (!sortedGrouped[type]) {
+      sortedGrouped[type] = grouped[type];
+    }
+  });
+  
+  return sortedGrouped;
 };
 
 export default function DashboardPage() {
@@ -216,88 +244,188 @@ export default function DashboardPage() {
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h4" component="h1" gutterBottom>
-        Account Management
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography variant="h4" component="h1">
+          Account Management
+        </Typography>
+        {accounts && accounts.length > 0 && (
+          <Chip 
+            label={`${accounts.length} Account${accounts.length !== 1 ? 's' : ''}`}
+            color="primary"
+            variant="outlined"
+          />
+        )}
+      </Box>
       
-      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-        {/* Accounts Grid */}
-        {accounts && accounts.length > 0 ? (
+      {/* Account Summary */}
+      {accounts && accounts.length > 0 && (
+        <Box sx={{ mb: 4 }}>
+          <Typography variant="h6" gutterBottom>
+            Account Summary
+          </Typography>
           <Box sx={{ 
             display: 'grid', 
             gridTemplateColumns: { 
-              xs: '1fr', 
-              sm: 'repeat(2, 1fr)', 
-              md: 'repeat(3, 1fr)',
-              lg: 'repeat(4, 1fr)'
+              xs: 'repeat(2, 1fr)', 
+              sm: 'repeat(3, 1fr)', 
+              md: 'repeat(4, 1fr)',
+              lg: 'repeat(6, 1fr)'
             }, 
-            gap: 3 
+            gap: 2 
           }}>
-            {accounts.map((account) => {
-              const accountIcon = accountTypeIcons[account.type as keyof typeof accountTypeIcons];
-              const IconComponent = accountIcon || Wallet;
-              const color = accountTypeColors[account.type as keyof typeof accountTypeColors] || '#666';
-
+            {Object.entries(groupAccountsByType(accounts)).map(([accountType, accountList]) => {
+              const typeIcon = accountTypeIcons[accountType as keyof typeof accountTypeIcons] || Category;
+              const TypeIconComponent = typeIcon;
+              const typeColor = accountTypeColors[accountType as keyof typeof accountTypeColors] || '#666';
+              const totalBalance = accountList.reduce((sum, account) => sum + account.currentBalanceCents, 0);
+              
               return (
-                <Card
-                  key={account._id}
-                  sx={{
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease-in-out',
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: 4,
-                    },
-                  }}
-                  onClick={() => router.push(`/accounts/${account._id}`)}
-                >
-                  <CardContent>
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                      <Box
-                        sx={{
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 48,
-                          height: 48,
-                          borderRadius: '50%',
-                          backgroundColor: color,
-                          color: 'white',
-                          mr: 2,
-                        }}
-                      >
-                        <IconComponent />
-                      </Box>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="h6" noWrap>
-                          {account.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {getAccountTypeDisplay(account.type)}
-                        </Typography>
-                      </Box>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMenuClick(e, account);
-                        }}
-                      >
-                        <MoreVert />
-                      </IconButton>
+                <Card key={`summary-${accountType}`} sx={{ backgroundColor: `${typeColor}15` }}>
+                  <CardContent sx={{ p: 2, textAlign: 'center' }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        backgroundColor: typeColor,
+                        color: 'white',
+                        mx: 'auto',
+                        mb: 1,
+                      }}
+                    >
+                      <TypeIconComponent fontSize="small" />
                     </Box>
-                    
-                    <Typography variant="h5" color="primary" sx={{ mb: 1 }}>
-                      {formatCurrency(account.currentBalanceCents, account.currency)}
+                    <Typography variant="body2" fontWeight={600} color={typeColor}>
+                      {getAccountTypeDisplay(accountType)}
                     </Typography>
-                    
-                    <Chip 
-                      label={account.currency} 
-                      size="small" 
-                      variant="outlined"
-                    />
+                    <Typography variant="body2" color="text.secondary">
+                      {accountList.length} account{accountList.length !== 1 ? 's' : ''}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" fontSize="0.75rem">
+                      {formatCurrency(totalBalance, accountList[0]?.currency || 'INR')}
+                    </Typography>
                   </CardContent>
                 </Card>
+              );
+            })}
+          </Box>
+        </Box>
+      )}
+      
+      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        {/* Accounts Grouped by Type */}
+        {accounts && accounts.length > 0 ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {Object.entries(groupAccountsByType(accounts)).map(([accountType, accountList]) => {
+              const typeIcon = accountTypeIcons[accountType as keyof typeof accountTypeIcons] || Category;
+              const TypeIconComponent = typeIcon;
+              const typeColor = accountTypeColors[accountType as keyof typeof accountTypeColors] || '#666';
+              
+              return (
+                <Box key={accountType}>
+                  {/* Account Type Header */}
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Box
+                      sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        width: 32,
+                        height: 32,
+                        borderRadius: '50%',
+                        backgroundColor: typeColor,
+                        color: 'white',
+                        mr: 2,
+                      }}
+                    >
+                      <TypeIconComponent fontSize="small" />
+                    </Box>
+                    <Typography variant="h6" sx={{ color: typeColor, fontWeight: 600 }}>
+                      {getAccountTypeDisplay(accountType)} ({accountList.length})
+                    </Typography>
+                  </Box>
+                  
+                  {/* Accounts Grid for this type */}
+                  <Box sx={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: { 
+                      xs: '1fr', 
+                      sm: 'repeat(2, 1fr)', 
+                      md: 'repeat(3, 1fr)',
+                      lg: 'repeat(4, 1fr)'
+                    }, 
+                    gap: 2,
+                    ml: 6 // Indent the cards slightly
+                  }}>
+                    {accountList.map((account) => {
+                      const accountIcon = accountTypeIcons[account.type as keyof typeof accountTypeIcons];
+                      const IconComponent = accountIcon || Wallet;
+                      const color = accountTypeColors[account.type as keyof typeof accountTypeColors] || '#666';
+
+                      return (
+                        <Card
+                          key={account._id}
+                          sx={{
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease-in-out',
+                            '&:hover': {
+                              transform: 'translateY(-4px)',
+                              boxShadow: 4,
+                            },
+                          }}
+                          onClick={() => router.push(`/accounts/${account._id}`)}
+                        >
+                          <CardContent sx={{ p: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                              <Box
+                                sx={{
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  width: 40,
+                                  height: 40,
+                                  borderRadius: '50%',
+                                  backgroundColor: color,
+                                  color: 'white',
+                                  mr: 2,
+                                }}
+                              >
+                                <IconComponent fontSize="small" />
+                              </Box>
+                              <Box sx={{ flexGrow: 1 }}>
+                                <Typography variant="subtitle1" noWrap fontWeight={600}>
+                                  {account.name}
+                                </Typography>
+                              </Box>
+                              <IconButton
+                                size="small"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleMenuClick(e, account);
+                                }}
+                              >
+                                <MoreVert fontSize="small" />
+                              </IconButton>
+                            </Box>
+                            
+                            <Typography variant="h6" color="primary" sx={{ mb: 1 }}>
+                              {formatCurrency(account.currentBalanceCents, account.currency)}
+                            </Typography>
+                            
+                            <Chip 
+                              label={account.currency} 
+                              size="small" 
+                              variant="outlined"
+                            />
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </Box>
+                </Box>
               );
             })}
           </Box>
@@ -366,7 +494,6 @@ export default function DashboardPage() {
                       <MenuItem value="debit_card">Debit Card</MenuItem>
                       <MenuItem value="credit_card">Credit Card</MenuItem>
                       <MenuItem value="cash">Cash</MenuItem>
-                      <MenuItem value="investments">Investments</MenuItem>
                       <MenuItem value="others">Others</MenuItem>
                     </Select>
                   </FormControl>
