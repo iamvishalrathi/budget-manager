@@ -14,10 +14,10 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
     const query = analyticsQuerySchema.parse({
-      granularity: searchParams.get('granularity'),
-      from: searchParams.get('from'),
-      to: searchParams.get('to'),
-      accountId: searchParams.get('accountId'),
+      granularity: searchParams.get('granularity') || undefined,
+      from: searchParams.get('from') || undefined,
+      to: searchParams.get('to') || undefined,
+      accountId: searchParams.get('accountId') || undefined,
     });
 
     await connectDB();

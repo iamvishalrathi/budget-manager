@@ -71,7 +71,7 @@ export default function AnalyticsPage() {
     const { accounts } = useAccounts();
     
     // Convert timeRange to granularity and date range
-    const getAnalyticsParams = () => {
+    const analyticsParams = useMemo(() => {
         const now = new Date();
         let from: Date;
         let granularity: string;
@@ -104,9 +104,9 @@ export default function AnalyticsPage() {
             to: now.toISOString(),
             accountId: selectedAccount === 'all' ? undefined : selectedAccount,
         };
-    };
+    }, [timeRange, selectedAccount]);
     
-    const { analytics, isLoading, isError } = useAnalytics(getAnalyticsParams());
+    const { analytics, isLoading, isError } = useAnalytics(analyticsParams);
 
     // Process time series data for line chart
     const timeSeriesChart = useMemo(() => {
