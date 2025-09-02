@@ -54,30 +54,34 @@ export async function POST(request: NextRequest) {
     
     try {
       await session.withTransaction(async () => {
-        // Create outgoing transaction (expense from source account)
+        // Create outgoing transaction (transfer from source account)
         const outgoingTransaction = new Transaction({
           userId,
           accountId: validatedData.fromAccountId,
-          type: 'expense',
+          type: 'transfer',
           category: validatedData.category,
-          amountCents: validatedData.amountCents,
+          amountCents: -validatedData.amountCents, // Negative for outgoing
           currency: fromAccount.currency,
           date: validatedData.date,
           note: validatedData.note ? `Transfer to ${toAccount.name}: ${validatedData.note}` : `Transfer to ${toAccount.name}`,
           transferId,
+          transferToAccountId: validatedData.toAccountId,
+          transferFromAccountId: validatedData.fromAccountId,
         });
         
-        // Create incoming transaction (income to destination account)
+        // Create incoming transaction (transfer to destination account)
         const incomingTransaction = new Transaction({
           userId,
           accountId: validatedData.toAccountId,
-          type: 'income',
+          type: 'transfer',
           category: validatedData.category,
-          amountCents: validatedData.amountCents,
+          amountCents: validatedData.amountCents, // Positive for incoming
           currency: toAccount.currency,
           date: validatedData.date,
           note: validatedData.note ? `Transfer from ${fromAccount.name}: ${validatedData.note}` : `Transfer from ${fromAccount.name}`,
           transferId,
+          transferToAccountId: validatedData.toAccountId,
+          transferFromAccountId: validatedData.fromAccountId,
         });
         
         // Save both transactions

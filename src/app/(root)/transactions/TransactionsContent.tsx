@@ -39,13 +39,19 @@ interface Transaction {
   _id: string;
   description?: string;
   category?: string;
-  type: 'income' | 'expense' | 'adjustment';
+  type: 'income' | 'expense' | 'adjustment' | 'transfer';
   amountCents: number;
   date: string;
   time?: string;
   paymentMode?: string;
   tags?: string[];
   accountId?: {
+    name: string;
+  };
+  transferToAccountId?: {
+    name: string;
+  };
+  transferFromAccountId?: {
     name: string;
   };
 }
@@ -77,7 +83,7 @@ export default function TransactionsContent() {
   const searchParams = useSearchParams();
   const accountId = searchParams.get('accountId');
   
-  const [transactionFilter, setTransactionFilter] = useState<'all' | 'income' | 'expense' | 'adjustment'>('all');
+  const [transactionFilter, setTransactionFilter] = useState<'all' | 'income' | 'expense' | 'adjustment' | 'transfer'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccount, setSelectedAccount] = useState(accountId || '');
 
@@ -242,6 +248,7 @@ export default function TransactionsContent() {
               <Tab label="All" value="all" />
               <Tab label="Income" value="income" />
               <Tab label="Expenses" value="expense" />
+              <Tab label="Transfers" value="transfer" />
               <Tab label="Adjustments" value="adjustment" />
             </Tabs>
           </Box>
@@ -270,6 +277,9 @@ export default function TransactionsContent() {
                         </Box>
                         <Typography variant="body2" color="text.secondary">
                           {transaction.category || 'Uncategorized'} • {new Date(transaction.date).toLocaleDateString()}
+                          {transaction.type === 'transfer' && transaction.transferFromAccountId && transaction.transferToAccountId && (
+                            <span> • From: {transaction.transferFromAccountId.name} → To: {transaction.transferToAccountId.name}</span>
+                          )}
                         </Typography>
                         {transaction.accountId?.name && (
                           <Typography variant="caption" color="text.secondary">
@@ -279,10 +289,15 @@ export default function TransactionsContent() {
                       </Box>
                       <Typography 
                         variant="h6" 
-                        color={transaction.type === 'income' ? 'success.main' : 'error.main'}
+                        color={
+                          transaction.type === 'income' ? 'success.main' : 
+                          transaction.type === 'transfer' ? 'info.main' :
+                          'error.main'
+                        }
                         sx={{ ml: 2 }}
                       >
-                        {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amountCents))}
+                        {transaction.type === 'income' ? '+' : 
+                         transaction.type === 'transfer' ? '⇄' : '-'}{formatCurrency(Math.abs(transaction.amountCents))}
                       </Typography>
                     </Box>
                   </CardContent>

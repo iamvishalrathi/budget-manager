@@ -78,6 +78,8 @@ export async function GET(request: NextRequest) {
     
     const transactions = await Transaction.find(filter)
       .populate('accountId', 'name type')
+      .populate('transferToAccountId', 'name type')
+      .populate('transferFromAccountId', 'name type')
       .sort({ date: -1, _id: -1 })
       .limit(query.limit);
     

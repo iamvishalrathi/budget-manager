@@ -4,7 +4,7 @@ export interface ITransaction extends Document {
   _id: string;
   userId: string;
   accountId: string;
-  type: 'income' | 'expense' | 'adjustment';
+  type: 'income' | 'expense' | 'adjustment' | 'transfer';
   category: string;
   amountCents: number;
   currency: string;
@@ -15,6 +15,8 @@ export interface ITransaction extends Document {
   note?: string;
   tags?: string[];
   transferId?: string; // Links related transfer transactions
+  transferToAccountId?: string; // For transfer transactions, stores the destination account
+  transferFromAccountId?: string; // For transfer transactions, stores the source account
   createdAt: Date;
   updatedAt: Date;
 }
@@ -32,7 +34,7 @@ const TransactionSchema = new Schema<ITransaction>(
     type: {
       type: String,
       required: true,
-      enum: ['income', 'expense', 'adjustment'],
+      enum: ['income', 'expense', 'adjustment', 'transfer'],
     },
     category: {
       type: String,
@@ -77,6 +79,14 @@ const TransactionSchema = new Schema<ITransaction>(
     transferId: {
       type: String,
       // Used to link transfer transactions
+    },
+    transferToAccountId: {
+      type: String,
+      // For transfer transactions, stores the destination account
+    },
+    transferFromAccountId: {
+      type: String,
+      // For transfer transactions, stores the source account
     },
   },
   {

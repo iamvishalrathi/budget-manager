@@ -62,7 +62,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
   const [openTransactionDialog, setOpenTransactionDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [accountId, setAccountId] = useState<string>('');
-  const [transactionFilter, setTransactionFilter] = useState<'all' | 'income' | 'expense' | 'adjustment'>('all');
+  const [transactionFilter, setTransactionFilter] = useState<'all' | 'income' | 'expense' | 'adjustment' | 'transfer'>('all');
 
   // Get the account ID from params
   React.useEffect(() => {
@@ -86,10 +86,14 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
     fetcher
   );
 
+  // Fetch all accounts for transfer functionality
+  const { data: allAccounts } = useSWR('/api/accounts', fetcher);
+
   const {
     control,
     handleSubmit,
     reset,
+    watch,
     formState: { errors },
   } = useForm({
     defaultValues: {
@@ -104,8 +108,11 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
       merchant: '',
       note: '',
       tags: [],
+      transferToAccountId: '',
     },
   });
+
+  const watchedType = watch('type');
 
   // Update form with accountId when it's available
   React.useEffect(() => {
@@ -122,6 +129,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
         merchant: '',
         note: '',
         tags: [],
+        transferToAccountId: '',
       });
     }
   }, [accountId, reset]);
@@ -138,6 +146,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
     merchant: string;
     note: string;
     tags?: string[];
+    transferToAccountId?: string;
   }) => {
     setSubmitting(true);
     try {
@@ -148,28 +157,56 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
         transactionDate.setHours(parseInt(hours), parseInt(minutes));
       }
 
-      const response = await fetch('/api/transactions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          accountId: data.accountId,
-          type: data.type,
-          category: data.category,
-          amountCents: data.amountCents * 100, // Convert to cents
-          currency: data.currency,
-          date: transactionDate,
-          time: data.time || undefined,
-          paymentMode: data.paymentMode || undefined,
-          merchant: data.merchant || undefined,
-          note: data.note || undefined,
-          tags: data.tags && data.tags.length > 0 ? data.tags : undefined,
-        }),
-      });
+      // Handle transfer transactions
+      if (data.type === 'transfer') {
+        if (!data.transferToAccountId) {
+          alert('Please select a destination account for the transfer.');
+          return;
+        }
 
-      if (!response.ok) {
-        throw new Error('Failed to create transaction');
+        const response = await fetch('/api/transfers', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fromAccountId: data.accountId,
+            toAccountId: data.transferToAccountId,
+            amountCents: data.amountCents * 100, // Convert to cents
+            date: transactionDate,
+            note: data.note || undefined,
+            category: data.category || 'Transfer',
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create transfer');
+        }
+      } else {
+        // Handle regular transactions
+        const response = await fetch('/api/transactions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            accountId: data.accountId,
+            type: data.type,
+            category: data.category,
+            amountCents: data.amountCents * 100, // Convert to cents
+            currency: data.currency,
+            date: transactionDate,
+            time: data.time || undefined,
+            paymentMode: data.paymentMode || undefined,
+            merchant: data.merchant || undefined,
+            note: data.note || undefined,
+            tags: data.tags && data.tags.length > 0 ? data.tags : undefined,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to create transaction');
+        }
       }
 
       reset();
@@ -263,6 +300,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
               <Tab label="All" value="all" />
               <Tab label="Income" value="income" />
               <Tab label="Expense" value="expense" />
+              <Tab label="Transfers" value="transfer" />
               <Tab label="Adjustments" value="adjustment" />
             </Tabs>
           </Box>
@@ -286,6 +324,8 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                 merchant?: string;
                 amountCents: number;
                 type: string;
+                transferToAccountId?: { name: string };
+                transferFromAccountId?: { name: string };
               }) => (
                 <ButtonBase
                   key={transaction._id}
@@ -311,20 +351,33 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                     <Typography variant="body2" color="text.secondary">
                       {new Date(transaction.date).toLocaleDateString()}
                       {transaction.merchant && transaction.category && ` • ${transaction.category}`}
+                      {transaction.type === 'transfer' && transaction.transferFromAccountId && transaction.transferToAccountId && (
+                        <span> • {transaction.amountCents > 0 ? `From: ${transaction.transferFromAccountId.name}` : `To: ${transaction.transferToAccountId.name}`}</span>
+                      )}
                     </Typography>
                   </Box>
                   <Box sx={{ textAlign: 'right' }}>
                     <Typography 
                       variant="body1" 
-                      color={transaction.type === 'income' ? 'success.main' : 'error.main'}
+                      color={
+                        transaction.type === 'income' ? 'success.main' : 
+                        transaction.type === 'transfer' ? 'info.main' :
+                        'error.main'
+                      }
                       fontWeight="bold"
                     >
-                      {transaction.type === 'income' ? '+' : '-'}{formatCurrency(Math.abs(transaction.amountCents))}
+                      {transaction.type === 'income' ? '+' : 
+                       transaction.type === 'transfer' ? (transaction.amountCents > 0 ? '+' : '-') : 
+                       '-'}{formatCurrency(Math.abs(transaction.amountCents))}
                     </Typography>
                     <Chip 
                       label={transaction.type.toUpperCase()} 
                       size="small"
-                      color={transaction.type === 'income' ? 'success' : 'error'}
+                      color={
+                        transaction.type === 'income' ? 'success' : 
+                        transaction.type === 'transfer' ? 'info' :
+                        'error'
+                      }
                     />
                   </Box>
                 </ButtonBase>
@@ -374,6 +427,7 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                     >
                       <MenuItem value="income">Income</MenuItem>
                       <MenuItem value="expense">Expense</MenuItem>
+                      <MenuItem value="transfer">Transfer</MenuItem>
                       <MenuItem value="adjustment">Adjustment</MenuItem>
                     </Select>
                   </FormControl>
@@ -395,6 +449,31 @@ export default function AccountDetailPage({ params }: { params: Promise<{ id: st
                   />
                 )}
               />
+
+              {/* Transfer Account Selector - Only show for transfer type */}
+              {watchedType === 'transfer' && (
+                <Controller
+                  name="transferToAccountId"
+                  control={control}
+                  render={({ field: { value, onChange, ...field } }) => (
+                    <FormControl fullWidth error={!!errors.transferToAccountId}>
+                      <InputLabel>Transfer To Account</InputLabel>
+                      <Select 
+                        {...field}
+                        value={value || ''}
+                        onChange={onChange}
+                        label="Transfer To Account"
+                      >
+                        {allAccounts?.filter((acc: { _id: string }) => acc._id !== accountId).map((acc: { _id: string; name: string; type: string }) => (
+                          <MenuItem key={acc._id} value={acc._id}>
+                            {acc.name} ({acc.type.replace('_', ' ').toUpperCase()})
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  )}
+                />
+              )}
               
               <Controller
                 name="amountCents"
