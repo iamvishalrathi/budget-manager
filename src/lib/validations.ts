@@ -16,7 +16,7 @@ export const createAccountSchema = z.object({
 export const updateAccountSchema = createAccountSchema.partial();
 
 // Transaction schemas
-export const transactionTypeSchema = z.enum(['income', 'expense', 'adjustment', 'transfer']);
+export const transactionTypeSchema = z.enum(['income', 'expense', 'transfer']);
 
 export const paymentModeSchema = z.enum(['cash', 'debit_card', 'credit_card', 'upi', 'net_banking', 'wallet', 'cheque', 'other']);
 
@@ -48,6 +48,13 @@ export const createTransferSchema = z.object({
   category: z.string().max(50).default('Transfer'),
 });
 
+// Balance adjustment schema
+export const balanceAdjustmentSchema = z.object({
+  accountId: z.string().min(1, 'Account ID is required'),
+  newBalanceCents: z.number().int(),
+  reason: z.string().min(1, 'Reason is required').max(200),
+});
+
 // Query schemas
 export const transactionQuerySchema = z.object({
   accountId: z.string().optional(),
@@ -73,5 +80,6 @@ export type UpdateAccountInput = z.infer<typeof updateAccountSchema>;
 export type CreateTransactionInput = z.infer<typeof createTransactionSchema>;
 export type UpdateTransactionInput = z.infer<typeof updateTransactionSchema>;
 export type CreateTransferInput = z.infer<typeof createTransferSchema>;
+export type BalanceAdjustmentInput = z.infer<typeof balanceAdjustmentSchema>;
 export type TransactionQuery = z.infer<typeof transactionQuerySchema>;
 export type AnalyticsQuery = z.infer<typeof analyticsQuerySchema>;

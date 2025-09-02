@@ -39,7 +39,7 @@ interface Transaction {
   _id: string;
   description?: string;
   category?: string;
-  type: 'income' | 'expense' | 'adjustment' | 'transfer';
+  type: 'income' | 'expense' | 'transfer';
   amountCents: number;
   date: string;
   time?: string;
@@ -83,7 +83,7 @@ export default function TransactionsContent() {
   const searchParams = useSearchParams();
   const accountId = searchParams.get('accountId');
   
-  const [transactionFilter, setTransactionFilter] = useState<'all' | 'income' | 'expense' | 'adjustment' | 'transfer'>('all');
+  const [transactionFilter, setTransactionFilter] = useState<'all' | 'income' | 'expense' | 'transfer'>('all');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedAccount, setSelectedAccount] = useState(accountId || '');
 
@@ -131,8 +131,6 @@ export default function TransactionsContent() {
       case 'income': return 'success';
       case 'expense': return 'error';
       case 'transfer': return 'info';
-      case 'refund': return 'warning';
-      case 'adjustment': return 'secondary';
       default: return 'default';
     }
   };
@@ -249,7 +247,6 @@ export default function TransactionsContent() {
               <Tab label="Income" value="income" />
               <Tab label="Expenses" value="expense" />
               <Tab label="Transfers" value="transfer" />
-              <Tab label="Adjustments" value="adjustment" />
             </Tabs>
           </Box>
 

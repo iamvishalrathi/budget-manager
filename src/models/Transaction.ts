@@ -4,7 +4,7 @@ export interface ITransaction extends Document {
   _id: string;
   userId: string;
   accountId: string;
-  type: 'income' | 'expense' | 'adjustment' | 'transfer';
+  type: 'income' | 'expense' | 'transfer';
   category: string;
   amountCents: number;
   currency: string;
@@ -34,7 +34,7 @@ const TransactionSchema = new Schema<ITransaction>(
     type: {
       type: String,
       required: true,
-      enum: ['income', 'expense', 'adjustment', 'transfer'],
+      enum: ['income', 'expense', 'transfer'],
     },
     category: {
       type: String,
